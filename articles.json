@@ -1,0 +1,18 @@
+[
+  {
+    "slug": "future-of-light-publishing",
+    "title": "The Future of Lightweight Publishing",
+    "publishedAt": "2026-04-04T10:00:00Z",
+    "tags": ["strategy", "publishing"],
+    "excerpt": "Why a focused publication pipeline can outperform a heavyweight CMS.",
+    "file": "./future-of-light-publishing.article.json"
+  },
+  {
+    "slug": "unicode-ready-content",
+    "title": "Unicode-Ready Content by Default",
+    "publishedAt": "2026-04-02T08:30:00Z",
+    "tags": ["content", "unicode"],
+    "excerpt": "A simple publication model should handle multilingual text and emoji cleanly.",
+    "file": "./unicode-ready-content.article.json"
+  }
+]
