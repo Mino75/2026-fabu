@@ -1,6 +1,206 @@
 const app = document.getElementById("app");
 
-const INDEX_FILE = "./articles.json";
+const INDEX_URL = "./articles.json";
+const DB_NAME = "fabu-db";
+const DB_VERSION = 1;
+const INDEX_STORE = "article_index";
+const ARTICLE_STORE = "articles";
+
+// -----------------------------
+// IndexedDB
+// -----------------------------
+
+function openDatabase() {
+  return new Promise((resolve, reject) => {
+    const request = indexedDB.open(DB_NAME, DB_VERSION);
+
+    request.onupgradeneeded = () => {
+      const db = request.result;
+
+      if (!db.objectStoreNames.contains(INDEX_STORE)) {
+        db.createObjectStore(INDEX_STORE, { keyPath: "key" });
+      }
+
+      if (!db.objectStoreNames.contains(ARTICLE_STORE)) {
+        const store = db.createObjectStore(ARTICLE_STORE, { keyPath: "slug" });
+        store.createIndex("publishedAt", "publishedAt", { unique: false });
+      }
+    };
+
+    request.onsuccess = () => resolve(request.result);
+    request.onerror = () => reject(request.error);
+  });
+}
+
+async function withStore(storeName, mode, work) {
+  const db = await openDatabase();
+
+  return new Promise((resolve, reject) => {
+    const transaction = db.transaction(storeName, mode);
+    const store = transaction.objectStore(storeName);
+
+    let result;
+
+    transaction.oncomplete = () => resolve(result);
+    transaction.onerror = () => reject(transaction.error);
+    transaction.onabort = () => reject(transaction.error);
+
+    Promise.resolve()
+      .then(() => work(store))
+      .then(value => {
+        result = value;
+      })
+      .catch(error => {
+        transaction.abort();
+        reject(error);
+      });
+  });
+}
+
+function requestToPromise(request) {
+  return new Promise((resolve, reject) => {
+    request.onsuccess = () => resolve(request.result);
+    request.onerror = () => reject(request.error);
+  });
+}
+
+async function saveIndexToDb(items) {
+  const normalizedItems = Array.isArray(items)
+    ? items.map(normalizeIndexItem)
+    : [];
+
+  await withStore(INDEX_STORE, "readwrite", async store => {
+    store.put({
+      key: "main",
+      items: normalizedItems,
+      savedAt: new Date().toISOString()
+    });
+  });
+}
+
+async function readIndexFromDb() {
+  return withStore(INDEX_STORE, "readonly", async store => {
+    const record = await requestToPromise(store.get("main"));
+    return record?.items || [];
+  });
+}
+
+async function saveArticleToDb(article) {
+  const normalized = normalizeArticle(article);
+
+  await withStore(ARTICLE_STORE, "readwrite", async store => {
+    store.put({
+      ...normalized,
+      savedAt: new Date().toISOString()
+    });
+  });
+}
+
+async function readArticleFromDb(slug) {
+  return withStore(ARTICLE_STORE, "readonly", async store => {
+    return requestToPromise(store.get(slug));
+  });
+}
+
+// -----------------------------
+// Data normalization
+// -----------------------------
+
+function normalizeIndexItem(item) {
+  return {
+    slug: String(item?.slug || "").trim(),
+    title: String(item?.title || "").trim(),
+    excerpt: String(item?.excerpt || "").trim(),
+    publishedAt: String(item?.publishedAt || item?.date || "").trim(),
+    tags: Array.isArray(item?.tags) ? item.tags.map(String) : [],
+    file: String(item?.file || "").trim()
+  };
+}
+
+function normalizeArticle(article) {
+  return {
+    slug: String(article?.slug || "").trim(),
+    title: String(article?.title || "").trim(),
+    excerpt: String(article?.excerpt || "").trim(),
+    publishedAt: String(article?.publishedAt || article?.date || "").trim(),
+    tags: Array.isArray(article?.tags) ? article.tags.map(String) : [],
+    html: String(article?.html || "")
+  };
+}
+
+// -----------------------------
+// HTTP
+// -----------------------------
+
+async function fetchJson(url) {
+  const response = await fetch(url, {
+    cache: "no-store",
+    headers: {
+      Accept: "application/json"
+    }
+  });
+
+  if (!response.ok) {
+    throw new Error(`Request failed: ${response.status} ${url}`);
+  }
+
+  return response.json();
+}
+
+async function loadArticlesIndex() {
+  try {
+    const remoteItems = await fetchJson(INDEX_URL);
+
+    if (!Array.isArray(remoteItems)) {
+      throw new Error("articles.json must contain an array.");
+    }
+
+    const normalized = remoteItems.map(normalizeIndexItem);
+    await saveIndexToDb(normalized);
+    return normalized;
+  } catch (networkError) {
+    const offlineItems = await readIndexFromDb();
+
+    if (offlineItems.length) {
+      return offlineItems;
+    }
+
+    throw networkError;
+  }
+}
+
+async function loadArticleBySlug(slug) {
+  const indexItems = await loadArticlesIndex();
+  const indexItem = indexItems.find(item => item.slug === slug);
+
+  if (!indexItem || !indexItem.file) {
+    const offlineArticle = await readArticleFromDb(slug);
+    return offlineArticle || null;
+  }
+
+  try {
+    const remoteArticle = await fetchJson(indexItem.file);
+    const normalized = normalizeArticle({
+      ...indexItem,
+      ...remoteArticle
+    });
+
+    await saveArticleToDb(normalized);
+    return normalized;
+  } catch (networkError) {
+    const offlineArticle = await readArticleFromDb(slug);
+
+    if (offlineArticle) {
+      return offlineArticle;
+    }
+
+    throw networkError;
+  }
+}
+
+// -----------------------------
+// UI helpers
+// -----------------------------
 
 function qs(selector, root = document) {
   return root.querySelector(selector);
@@ -11,7 +211,7 @@ function cloneTemplate(id) {
   return tpl ? tpl.content.cloneNode(true) : document.createDocumentFragment();
 }
 
-function normalize(value) {
+function normalizeText(value) {
   return String(value || "").toLowerCase().trim();
 }
 
@@ -40,9 +240,8 @@ function formatDate(value) {
 
 function sortArticlesByDate(items, order = "desc") {
   return [...items].sort((a, b) => {
-    const dateA = new Date(a.publishedAt || a.date || 0).getTime();
-    const dateB = new Date(b.publishedAt || b.date || 0).getTime();
-
+    const dateA = new Date(a.publishedAt || 0).getTime();
+    const dateB = new Date(b.publishedAt || 0).getTime();
     return order === "asc" ? dateA - dateB : dateB - dateA;
   });
 }
@@ -57,21 +256,15 @@ function getUniqueTags(items) {
   return [...tags].sort((a, b) => a.localeCompare(b, "en"));
 }
 
-function getRoute() {
-  const path = window.location.pathname.replace(/\/+$/, "") || "/";
+function renderTagList(container, tags) {
+  container.innerHTML = "";
 
-  if (path === "/") {
-    return { name: "home" };
-  }
-
-  if (path.startsWith("/article/")) {
-    return {
-      name: "article",
-      slug: decodeURIComponent(path.slice("/article/".length))
-    };
-  }
-
-  return { name: "not-found" };
+  (tags || []).forEach(tag => {
+    const el = document.createElement("span");
+    el.className = "tag";
+    el.textContent = tag;
+    container.appendChild(el);
+  });
 }
 
 function sanitizeHtml(html) {
@@ -110,74 +303,37 @@ function sanitizeHtml(html) {
   return template.innerHTML;
 }
 
-async function fetchJson(url) {
-  const response = await fetch(url, {
-    headers: {
-      Accept: "application/json"
-    }
-  });
+// -----------------------------
+// Routing
+// -----------------------------
 
-  if (!response.ok) {
-    throw new Error("Request failed: " + response.status + " " + url);
+function getRoute() {
+  const path = window.location.pathname.replace(/\/+$/, "") || "/";
+
+  if (path === "/") {
+    return { name: "home" };
   }
 
-  return response.json();
-}
-
-async function fetchArticlesIndex() {
-  const data = await fetchJson(INDEX_FILE);
-
-  if (!Array.isArray(data)) {
-    throw new Error("articles.json must contain an array.");
+  if (path.startsWith("/article/")) {
+    return {
+      name: "article",
+      slug: decodeURIComponent(path.slice("/article/".length))
+    };
   }
 
-  return data.map(item => ({
-    slug: item.slug,
-    title: item.title,
-    excerpt: item.excerpt || "",
-    publishedAt: item.publishedAt || item.date || "",
-    tags: Array.isArray(item.tags) ? item.tags : [],
-    file: item.file || ""
-  }));
+  return { name: "not-found" };
 }
 
-async function fetchArticleBySlug(slug) {
-  const index = await fetchArticlesIndex();
-  const match = index.find(item => item.slug === slug);
-
-  if (!match || !match.file) {
-    return null;
-  }
-
-  const article = await fetchJson(match.file);
-
-  return {
-    slug: article.slug || match.slug,
-    title: article.title || match.title,
-    excerpt: article.excerpt || match.excerpt || "",
-    publishedAt: article.publishedAt || article.date || match.publishedAt || "",
-    tags: Array.isArray(article.tags) ? article.tags : match.tags || [],
-    html: article.html || ""
-  };
-}
-
-function renderTagList(container, tags) {
-  container.innerHTML = "";
-
-  (tags || []).forEach(tag => {
-    const el = document.createElement("span");
-    el.className = "tag";
-    el.textContent = tag;
-    container.appendChild(el);
-  });
-}
+// -----------------------------
+// Views
+// -----------------------------
 
 function renderHomeError(error) {
   app.innerHTML = `
     <main class="page-shell narrow-shell">
       <section class="surface empty-state">
         <h1>Unable to load articles</h1>
-        <p>${error.message}</p>
+        <p>${escapeHtml(error.message || "Unknown error")}</p>
       </section>
     </main>
   `;
@@ -189,7 +345,7 @@ function renderArticleError(message) {
     <main class="page-shell article-shell">
       <section class="surface empty-state">
         <h1>Unable to load article</h1>
-        <p>${message}</p>
+        <p>${escapeHtml(message || "Unknown error")}</p>
         <a href="/" data-link class="button-link">Go back home</a>
       </section>
     </main>
@@ -197,9 +353,15 @@ function renderArticleError(message) {
   document.title = "Error · Publisher";
 }
 
+function escapeHtml(value) {
+  const div = document.createElement("div");
+  div.textContent = String(value || "");
+  return div.innerHTML;
+}
+
 async function renderHome() {
   try {
-    const articles = await fetchArticlesIndex();
+    const articles = await loadArticlesIndex();
     const view = cloneTemplate("tpl-home");
     app.replaceChildren(view);
 
@@ -246,12 +408,12 @@ async function renderHome() {
     }
 
     function applyFilters() {
-      const query = normalize(searchInput.value);
-      const selectedTag = normalize(tagSelect.value);
+      const query = normalizeText(searchInput.value);
+      const selectedTag = normalizeText(tagSelect.value);
       const sortOrder = sortSelect.value;
 
       let filtered = articles.filter(article => {
-        const haystack = normalize([
+        const haystack = normalizeText([
           article.title,
           article.excerpt,
           (article.tags || []).join(" "),
@@ -261,7 +423,7 @@ async function renderHome() {
         const matchesQuery = !query || haystack.includes(query);
         const matchesTag =
           !selectedTag ||
-          (article.tags || []).some(tag => normalize(tag) === selectedTag);
+          (article.tags || []).some(tag => normalizeText(tag) === selectedTag);
 
         return matchesQuery && matchesTag;
       });
@@ -286,7 +448,7 @@ async function renderHome() {
 
 async function renderArticlePage(slug) {
   try {
-    const article = await fetchArticleBySlug(slug);
+    const article = await loadArticleBySlug(slug);
 
     if (!article) {
       renderNotFound();
@@ -316,6 +478,10 @@ function renderNotFound() {
   app.replaceChildren(view);
   document.title = "Not found · Publisher";
 }
+
+// -----------------------------
+// App
+// -----------------------------
 
 async function render() {
   const route = getRoute();
