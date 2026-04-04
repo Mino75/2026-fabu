@@ -1,0 +1,8 @@
+{
+  "slug": "future-of-light-publishing",
+  "title": "The Future of Lightweight Publishing",
+  "publishedAt": "2026-04-04T10:00:00Z",
+  "tags": ["strategy", "publishing", "unicode"],
+  "excerpt": "Why a focused publication pipeline can outperform a heavyweight CMS while handling multilingual content cleanly.",
+  "html": "<article><p>A public publisher does not need a full rich-text editing engine to deliver value. Its competitive advantage comes from fast ingestion, clean indexing, predictable rendering, and low operational overhead.</p><p>When the incoming payload is already HTML, the platform should preserve that strength instead of rebuilding the document into a heavier intermediate structure. In a publication pipeline, less transformation usually means fewer bugs, lower latency, and a more durable architecture.</p><h2>Global readability is a baseline requirement</h2><p>A modern publisher should treat multilingual text as a first-class capability, not as an edge case. Unicode support is no longer optional for products that want to scale internationally.</p><p>轻量化发布平台的价值，不在于提供复杂的编辑能力，而在于以更低的成本、更高的稳定性和更快的速度，把内容可靠地送达到读者面前。对于以发布为核心的系统来说，减少不必要的转换链路，往往比增加功能更重要。</p><p>軽量な公開プラットフォームは、多機能であることよりも、配信が速く、構造が明快で、運用コストが低いことに価値があります。公開が主目的であれば、入力されたHTMLをできるだけそのまま活かす設計のほうが、長期的には堅牢です。</p><p>Лёгкая платформа публикации выигрывает не за счёт сложного редактора, а за счёт скорости доставки, устойчивости архитектуры и низкой стоимости сопровождения. Если система предназначена прежде всего для публикации, то избыточные преобразования контента только увеличивают риск ошибок.</p><p>English, 中文, 日本語, and Русский can live in the same article without special handling, as long as the files are saved as UTF-8 and the JSON is generated correctly.</p></article>"
+}
