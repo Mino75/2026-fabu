@@ -1,0 +1,115 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta
+    name="viewport"
+    content="width=device-width, initial-scale=1, viewport-fit=cover"
+  />
+  <title>Publisher</title>
+  <meta
+    name="description"
+    content="A minimal publication frontend with article listing, search, tags, and article pages."
+  />
+</head>
+<body>
+  <div id="app"></div>
+
+  <!-- Home template -->
+  <template id="tpl-home">
+    <main class="page-shell">
+      <header class="hero">
+        <div class="hero-badge">Lightweight Publisher</div>
+        <h1 class="hero-title">Articles</h1>
+        <p class="hero-text">
+          Fast public publishing with search, tag filtering, and date sorting.
+        </p>
+      </header>
+
+      <section class="toolbar surface">
+        <div class="field field-search">
+          <label for="searchInput">Search</label>
+          <input
+            id="searchInput"
+            type="search"
+            placeholder="Search by title, excerpt, tag..."
+            autocomplete="off"
+          />
+        </div>
+
+        <div class="field">
+          <label for="tagSelect">Tag</label>
+          <select id="tagSelect">
+            <option value="">All tags</option>
+          </select>
+        </div>
+
+        <div class="field">
+          <label for="sortSelect">Sort by date</label>
+          <select id="sortSelect">
+            <option value="desc">Newest first</option>
+            <option value="asc">Oldest first</option>
+          </select>
+        </div>
+      </section>
+
+      <section class="results-row">
+        <span id="resultsCount">0 articles</span>
+      </section>
+
+      <section id="articleList" class="cards-grid"></section>
+    </main>
+  </template>
+
+  <!-- Article card template -->
+  <template id="tpl-card">
+    <article class="surface card">
+      <div class="card-meta">
+        <time class="card-date"></time>
+        <div class="tag-list"></div>
+      </div>
+
+      <h2 class="card-title"></h2>
+      <p class="card-excerpt"></p>
+
+      <div class="card-footer">
+        <a class="button-link card-link" href="#">Read article</a>
+      </div>
+    </article>
+  </template>
+
+  <!-- Article page template -->
+  <template id="tpl-article">
+    <main class="page-shell article-shell">
+      <nav class="top-nav">
+        <a href="/" data-link class="back-link">← Back to articles</a>
+      </nav>
+
+      <header class="surface article-header">
+        <time id="articleDate" class="article-date"></time>
+        <h1 id="articleTitle" class="article-title"></h1>
+        <p id="articleExcerpt" class="article-excerpt"></p>
+        <div id="articleTags" class="tag-list"></div>
+      </header>
+
+      <article id="articleBody" class="surface article-body">
+        <p>Loading article...</p>
+      </article>
+    </main>
+  </template>
+
+  <!-- Not found template -->
+  <template id="tpl-not-found">
+    <main class="page-shell narrow-shell">
+      <section class="surface empty-state">
+        <h1>Not found</h1>
+        <p>The requested resource could not be found.</p>
+        <a href="/" data-link class="button-link">Go back home</a>
+      </section>
+    </main>
+  </template>
+
+  <script type="module" src="./styles.js"></script>
+  <script type="module" src="./main.js"></script>
+</body>
+</html>
