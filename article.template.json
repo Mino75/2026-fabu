@@ -1,0 +1,8 @@
+{
+  "slug": "article-slug",
+  "title": "Article Title",
+  "publishedAt": "2026-04-04T10:00:00Z",
+  "tags": ["tag-one", "tag-two"],
+  "excerpt": "Short summary used in the article listing.",
+  "html": "<article><p>Your published HTML goes here.</p></article>"
+}
