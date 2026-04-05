@@ -12,21 +12,7 @@ const app = express();
 const SUPPORTED_LANGUAGES = new Set(["en", "fr", "mg", "zh-CN", "ru", "ja", "es"]);
 const SUPPORTED_TYPES = new Set(["article"]);
 
-// --------------------------------------------------
-// Normalizers used by config bootstrap
-// --------------------------------------------------
 
-function normalizeLanguage(value) {
-  const raw = String(value || "").trim();
-  return SUPPORTED_LANGUAGES.has(raw) ? raw : "en";
-}
-
-function normalizeType(value) {
-  return String(value || "")
-    .trim()
-    .toLowerCase()
-    .replace(/[^a-z0-9_-]+/g, "");
-}
 
 // --------------------------------------------------
 // Config
@@ -204,20 +190,6 @@ function resolveRecordFilePathBySlug(type, slug) {
   return resolved;
 }
 
-function extractSlugFromRecordFile(type, fileValue) {
-  const safeType = ensureSupportedType(type);
-  const raw = String(fileValue || "").trim();
-  const expectedSuffix = `.${safeType}.json`;
-
-  if (!raw.endsWith(expectedSuffix)) {
-    throw new Error(`Record file must end with "${expectedSuffix}".`);
-  }
-
-  const fileName = path.basename(raw);
-  const slug = fileName.slice(0, -expectedSuffix.length);
-
-  return normalizeSlug(slug);
-}
 
 async function readJsonFile(filePath, fallback = null) {
   try {
@@ -472,8 +444,8 @@ app.get("/manifest.webmanifest", (req, res) => {
   res.send(JSON.stringify(manifest, null, 2));
 });
 
-app.get("/favicon.png", (req, res) => {
-  sendBase64Asset(res, FAVICON_BASE64, "image/png");
+app.get("/favicon.ico", (req, res) => {
+  sendBase64Asset(res, FAVICON_BASE64, "image/x-icon");
 });
 
 app.get("/icon-192.png", (req, res) => {
@@ -488,18 +460,6 @@ app.get("/icon-512.png", (req, res) => {
 // Public content routes
 // --------------------------------------------------
 
-app.get("/content/:type/index.json", async (req, res) => {
-  try {
-    const type = ensureSupportedType(req.params.type);
-    const index = await readTypeIndex(type);
-    res.json(index);
-  } catch (error) {
-    res.status(400).json({
-      ok: false,
-      error: error.message
-    });
-  }
-});
 
 app.get("/article.index.json", async (req, res) => {
   try {
