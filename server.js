@@ -6,6 +6,29 @@ const fsp = require("fs/promises");
 const app = express();
 
 // --------------------------------------------------
+// Static capability maps
+// --------------------------------------------------
+
+const SUPPORTED_LANGUAGES = new Set(["en", "fr", "mg", "zh-CN", "ru", "ja", "es"]);
+const SUPPORTED_TYPES = new Set(["article"]);
+
+// --------------------------------------------------
+// Normalizers used by config bootstrap
+// --------------------------------------------------
+
+function normalizeLanguage(value) {
+  const raw = String(value || "").trim();
+  return SUPPORTED_LANGUAGES.has(raw) ? raw : "en";
+}
+
+function normalizeType(value) {
+  return String(value || "")
+    .trim()
+    .toLowerCase()
+    .replace(/[^a-z0-9_-]+/g, "");
+}
+
+// --------------------------------------------------
 // Config
 // --------------------------------------------------
 
@@ -29,9 +52,6 @@ const DEFAULT_CONTENT_TYPE = normalizeType(process.env.DEFAULT_CONTENT_TYPE || "
 const FAVICON_BASE64 = process.env.FAVICON_BASE64 || "";
 const ICON_192_BASE64 = process.env.ICON_192_BASE64 || "";
 const ICON_512_BASE64 = process.env.ICON_512_BASE64 || "";
-
-const SUPPORTED_LANGUAGES = new Set(["en", "fr", "mg", "zh-CN", "ru", "ja", "es"]);
-const SUPPORTED_TYPES = new Set(["article"]);
 
 app.use(express.json({ limit: "2mb" }));
 
