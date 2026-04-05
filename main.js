@@ -106,14 +106,34 @@ async function readArticleFromDb(slug) {
 // Data normalization
 // -----------------------------
 
+function normalizeArticleFilePath(file, slug) {
+  const raw = String(file || "").trim();
+
+  if (raw.startsWith("/")) {
+    return raw;
+  }
+
+  if (raw.startsWith("./")) {
+    return "/" + raw.slice(2);
+  }
+
+  if (raw) {
+    return "/" + raw.replace(/^\/+/, "");
+  }
+
+  return "/" + String(slug || "").trim() + ".article.json";
+}
+
 function normalizeIndexItem(item) {
+  const slug = String(item?.slug || "").trim();
+
   return {
-    slug: String(item?.slug || "").trim(),
+    slug,
     title: String(item?.title || "").trim(),
     excerpt: String(item?.excerpt || "").trim(),
     publishedAt: String(item?.publishedAt || item?.date || "").trim(),
     tags: Array.isArray(item?.tags) ? item.tags.map(String) : [],
-    file: String(item?.file || "").trim()
+    file: normalizeArticleFilePath(item?.file, slug)
   };
 }
 
