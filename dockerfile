@@ -10,6 +10,8 @@ RUN npm install
 
 # Copy the rest of your application source code
 COPY . .
+#copy the volume for init
+RUN mkdir -p /data && cp -r data/. /data/
 
 # Expose the port your app runs on
 EXPOSE 3000
