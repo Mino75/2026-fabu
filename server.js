@@ -90,15 +90,21 @@ function getDefaultArticleFile(slug) {
 function resolveArticleFilePath(fileValue) {
   const normalized = String(fileValue || "").trim();
 
-  if (!normalized.startsWith("./")) {
-    throw new Error("Article file must start with './'.");
-  }
-
   if (!normalized.endsWith(".json")) {
     throw new Error("Article file must end with '.json'.");
   }
 
-  const resolved = path.resolve(ROOT_DIR, normalized);
+  let relativePath;
+
+  if (normalized.startsWith("/")) {
+    relativePath = "." + normalized;
+  } else if (normalized.startsWith("./")) {
+    relativePath = normalized;
+  } else {
+    relativePath = "./" + normalized.replace(/^\/+/, "");
+  }
+
+  const resolved = path.resolve(ROOT_DIR, relativePath);
 
   if (!resolved.startsWith(ROOT_DIR)) {
     throw new Error("Invalid article file path.");
