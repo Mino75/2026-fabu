@@ -8,17 +8,17 @@
     "createdAt": "2026-04-05T10:00:00Z",
     "updatedAt": "2026-04-05T10:00:00Z",
     "tags": ["strategy", "publishing"],
-    "file": "/data/future-of-light-publishing.json"
-  }
+    "file": "/future-of-light-publishing.article.json"
+  },
   {
     "type": "article",
     "slug": "template",
     "title": "template",
+    "excerpt": "A simple publication model should handle multilingual text and emoji cleanly.",
     "publishedAt": "2026-04-02T08:30:00Z",
     "createdAt": "2026-04-05T10:00:00Z",
     "updatedAt": "2026-04-05T10:00:00Z",
     "tags": ["content", "unicode"],
-    "excerpt": "A simple publication model should handle multilingual text and emoji cleanly.",
     "file": "/article.template.json"
   }
 ]
