@@ -8,11 +8,11 @@
     "file": "/future-of-light-publishing.article.json"
   },
   {
-    "slug": "unicode-ready-content",
-    "title": "Unicode-Ready Content by Default",
+    "slug": "template",
+    "title": "template",
     "publishedAt": "2026-04-02T08:30:00Z",
     "tags": ["content", "unicode"],
     "excerpt": "A simple publication model should handle multilingual text and emoji cleanly.",
-    "file": "/unicode-ready-content.article.json"
+    "file": "/article.template.json"
   }
 ]
