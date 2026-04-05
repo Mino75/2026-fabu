@@ -655,9 +655,9 @@ async function renderHome() {
     const view = cloneTemplate("tpl-home");
     app.replaceChildren(view);
 
-    qs("#heroBadge").textContent = t.heroBadge;
-    qs("#heroTitle").textContent = t.heroTitle;
-    qs("#heroText").textContent = t.heroText;
+    qs("#heroBadge").textContent = APP_CONFIG.heroBadge       || t.heroBadge;
+    qs("#heroTitle").textContent = APP_CONFIG.siteTitle       || t.heroTitle;
+    qs("#heroText").textContent  = APP_CONFIG.siteDescription || t.heroText;
 
     qs("#searchLabel").textContent = t.searchLabel;
     qs("#searchInput").placeholder = t.searchPlaceholder;
