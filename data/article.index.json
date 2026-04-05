@@ -19,6 +19,6 @@
     "createdAt": "2026-04-05T10:00:00Z",
     "updatedAt": "2026-04-05T10:00:00Z",
     "tags": ["content", "unicode"],
-    "file": "/article.template.json"
+    "file": "/template.article.json"
   }
 ]
