@@ -2,7 +2,7 @@ const app = document.getElementById("app");
 
 const APP_CONFIG = window.__APP_CONFIG__ || {};
 const CONTENT_TYPE = APP_CONFIG.defaultContentType || "article";
-const INDEX_URL = `/content/${encodeURIComponent(CONTENT_TYPE)}/index.json`;
+const INDEX_URL = `/${CONTENT_TYPE}.index.json`;
 
 const DB_NAME = "fabu-db";
 const DB_VERSION = 2;
@@ -356,7 +356,7 @@ function normalizeRecord(record, type = CONTENT_TYPE) {
 }
 
 function buildRecordUrl(type, slug) {
-  return `/content/${encodeURIComponent(type)}/${encodeURIComponent(slug)}.json`;
+  return `/${encodeURIComponent(slug)}.${encodeURIComponent(type)}.json`;
 }
 
 function getComparableTimestamp(value) {
@@ -418,7 +418,7 @@ async function syncChangedRecordsFromIndex(type, indexItems) {
 
 async function loadContentIndex(type) {
   try {
-    const remoteItems = await fetchJson(`/content/${encodeURIComponent(type)}/index.json`);
+    const remoteItems = await fetchJson(INDEX_URL);
 
     if (!Array.isArray(remoteItems)) {
       throw new Error("Index endpoint must return an array.");
