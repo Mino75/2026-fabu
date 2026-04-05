@@ -31,6 +31,7 @@ const SITE_TITLE = process.env.SITE_TITLE || "Publisher";
 const SITE_DESCRIPTION =
   process.env.SITE_DESCRIPTION ||
   "A minimal publication frontend with offline sync and local-first rendering.";
+const SITE_HERO_BADGE = process.env.SITE_HERO_BADGE || "";
 const SITE_LANGUAGE = normalizeLanguage(process.env.SITE_LANGUAGE || "en");
 
 const DEFAULT_CONTENT_TYPE = normalizeType(process.env.DEFAULT_CONTENT_TYPE || "article") || "article";
