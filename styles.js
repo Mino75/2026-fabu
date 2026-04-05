@@ -47,6 +47,10 @@ select {
   font: inherit;
 }
 
+button {
+  cursor: pointer;
+}
+
 input,
 select {
   width: 100%;
@@ -139,9 +143,18 @@ select:focus {
 }
 
 .results-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  align-items: center;
+  justify-content: space-between;
   padding: 0.9rem 0 1rem;
   color: var(--muted);
   font-size: 0.95rem;
+}
+
+.showing-count {
+  font-size: 0.9rem;
 }
 
 .cards-grid {
@@ -207,6 +220,21 @@ select:focus {
   transform: translateY(-1px);
   border-color: rgba(37, 99, 235, 0.32);
   background: linear-gradient(180deg, rgba(37, 99, 235, 0.12), rgba(37, 99, 235, 0.07));
+}
+
+.button-secondary {
+  width: 100%;
+  background: #ffffff;
+}
+
+.load-more-row {
+  display: flex;
+  justify-content: center;
+  padding-top: 1.2rem;
+}
+
+.load-more-row .button-link {
+  min-width: 180px;
 }
 
 .tag-list {
@@ -339,6 +367,10 @@ select:focus {
   .article-header,
   .article-body {
     padding: 1.35rem;
+  }
+
+  .button-secondary {
+    width: auto;
   }
 }
 
