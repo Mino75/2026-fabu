@@ -1,15 +1,15 @@
 const css = `
 :root {
-  --bg: #07111f;
-  --bg-2: #0b1728;
-  --surface: rgba(12, 23, 40, 0.82);
-  --surface-2: rgba(16, 30, 51, 0.9);
-  --line: rgba(159, 188, 255, 0.14);
-  --text: #edf4ff;
-  --muted: #9aacc7;
-  --accent: #79b8ff;
-  --accent-2: #8ef0ff;
-  --shadow: 0 20px 60px rgba(0, 0, 0, 0.28);
+  --bg: #f7f8fb;
+  --bg-2: #eef2f7;
+  --surface: rgba(255, 255, 255, 0.92);
+  --surface-2: rgba(255, 255, 255, 0.98);
+  --line: rgba(15, 23, 42, 0.1);
+  --text: #111827;
+  --muted: #5b6472;
+  --accent: #2563eb;
+  --accent-2: #1d4ed8;
+  --shadow: 0 18px 48px rgba(15, 23, 42, 0.08);
   --radius: 20px;
   --radius-sm: 14px;
   --max-width: 1120px;
@@ -31,8 +31,8 @@ body {
   font-family: var(--font);
   line-height: 1.6;
   background:
-    radial-gradient(circle at top left, rgba(121, 184, 255, 0.14), transparent 30%),
-    radial-gradient(circle at top right, rgba(142, 240, 255, 0.08), transparent 28%),
+    radial-gradient(circle at top left, rgba(37, 99, 235, 0.06), transparent 28%),
+    radial-gradient(circle at top right, rgba(59, 130, 246, 0.05), transparent 24%),
     linear-gradient(180deg, var(--bg) 0%, var(--bg-2) 100%);
 }
 
@@ -54,20 +54,20 @@ select {
   border: 1px solid var(--line);
   border-radius: 14px;
   padding: 0.9rem 1rem;
-  background: rgba(7, 15, 27, 0.62);
+  background: #ffffff;
   color: var(--text);
   outline: none;
-  transition: border-color 160ms ease, background 160ms ease, transform 160ms ease;
+  transition: border-color 160ms ease, box-shadow 160ms ease, transform 160ms ease;
 }
 
 input::placeholder {
-  color: var(--muted);
+  color: #8a93a3;
 }
 
 input:focus,
 select:focus {
-  border-color: rgba(121, 184, 255, 0.55);
-  background: rgba(9, 18, 33, 0.82);
+  border-color: rgba(37, 99, 235, 0.45);
+  box-shadow: 0 0 0 4px rgba(37, 99, 235, 0.08);
 }
 
 .page-shell {
@@ -90,9 +90,9 @@ select:focus {
   min-height: 32px;
   padding: 0.35rem 0.75rem;
   border-radius: 999px;
-  color: var(--accent-2);
-  background: rgba(121, 184, 255, 0.08);
-  border: 1px solid rgba(121, 184, 255, 0.16);
+  color: var(--accent);
+  background: rgba(37, 99, 235, 0.08);
+  border: 1px solid rgba(37, 99, 235, 0.14);
   font-size: 0.78rem;
   font-weight: 700;
   letter-spacing: 0.08em;
@@ -104,6 +104,7 @@ select:focus {
   font-size: clamp(2.2rem, 10vw, 4.5rem);
   line-height: 0.95;
   letter-spacing: -0.04em;
+  color: #0f172a;
 }
 
 .hero-text {
@@ -115,8 +116,8 @@ select:focus {
 
 .surface {
   background: var(--surface);
-  backdrop-filter: blur(18px);
-  -webkit-backdrop-filter: blur(18px);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
   border: 1px solid var(--line);
   border-radius: var(--radius);
   box-shadow: var(--shadow);
@@ -174,6 +175,7 @@ select:focus {
   font-size: 1.35rem;
   line-height: 1.15;
   letter-spacing: -0.02em;
+  color: #0f172a;
 }
 
 .card-excerpt,
@@ -194,17 +196,17 @@ select:focus {
   min-height: 44px;
   padding: 0.75rem 1rem;
   border-radius: 14px;
-  border: 1px solid rgba(121, 184, 255, 0.2);
-  background: linear-gradient(180deg, rgba(121, 184, 255, 0.14), rgba(121, 184, 255, 0.08));
-  color: var(--text);
+  border: 1px solid rgba(37, 99, 235, 0.18);
+  background: linear-gradient(180deg, rgba(37, 99, 235, 0.08), rgba(37, 99, 235, 0.05));
+  color: #0f172a;
   font-weight: 650;
   transition: transform 160ms ease, border-color 160ms ease, background 160ms ease;
 }
 
 .button-link:hover {
   transform: translateY(-1px);
-  border-color: rgba(121, 184, 255, 0.45);
-  background: linear-gradient(180deg, rgba(121, 184, 255, 0.18), rgba(121, 184, 255, 0.1));
+  border-color: rgba(37, 99, 235, 0.32);
+  background: linear-gradient(180deg, rgba(37, 99, 235, 0.12), rgba(37, 99, 235, 0.07));
 }
 
 .tag-list {
@@ -219,9 +221,9 @@ select:focus {
   min-height: 30px;
   padding: 0.25rem 0.7rem;
   border-radius: 999px;
-  border: 1px solid rgba(142, 240, 255, 0.14);
-  background: rgba(142, 240, 255, 0.06);
-  color: var(--accent-2);
+  border: 1px solid rgba(37, 99, 235, 0.12);
+  background: rgba(37, 99, 235, 0.06);
+  color: var(--accent);
   font-size: 0.8rem;
   white-space: nowrap;
 }
@@ -249,6 +251,7 @@ select:focus {
   font-size: clamp(2rem, 8vw, 3.6rem);
   line-height: 0.98;
   letter-spacing: -0.04em;
+  color: #0f172a;
 }
 
 .article-body {
@@ -265,6 +268,7 @@ select:focus {
   margin-bottom: 0.55em;
   line-height: 1.15;
   letter-spacing: -0.02em;
+  color: #0f172a;
 }
 
 .article-body p,
@@ -295,7 +299,7 @@ select:focus {
   padding: 1rem;
   border-radius: 14px;
   border: 1px solid var(--line);
-  background: rgba(4, 10, 18, 0.85);
+  background: #f3f6fb;
 }
 
 .article-body blockquote {
@@ -303,7 +307,7 @@ select:focus {
   padding: 0.85rem 1rem;
   border-left: 3px solid var(--accent);
   border-radius: 0 14px 14px 0;
-  background: rgba(121, 184, 255, 0.06);
+  background: rgba(37, 99, 235, 0.06);
 }
 
 .empty-state {
