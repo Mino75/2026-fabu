@@ -446,7 +446,8 @@ app.get("/app-config.js", (req, res) => {
     siteTitle: SITE_TITLE,
     siteDescription: SITE_DESCRIPTION,
     siteLanguage: SITE_LANGUAGE,
-    defaultContentType: DEFAULT_CONTENT_TYPE
+    defaultContentType: DEFAULT_CONTENT_TYPE,
+    heroBadge: SITE_HERO_BADGE 
   };
 
   res.setHeader("Content-Type", "application/javascript; charset=utf-8");
