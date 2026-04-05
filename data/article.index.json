@@ -1,13 +1,17 @@
 [
   {
+    "type": "article",
     "slug": "future-of-light-publishing",
     "title": "The Future of Lightweight Publishing",
-    "publishedAt": "2026-04-04T10:00:00Z",
-    "tags": ["strategy", "publishing"],
     "excerpt": "Why a focused publication pipeline can outperform a heavyweight CMS.",
-    "file": "/future-of-light-publishing.article.json"
-  },
+    "publishedAt": "2026-04-05T10:00:00Z",
+    "createdAt": "2026-04-05T10:00:00Z",
+    "updatedAt": "2026-04-05T10:00:00Z",
+    "tags": ["strategy", "publishing"],
+    "file": "/content/article/future-of-light-publishing.json"
+  }
   {
+    "type": "article",
     "slug": "template",
     "title": "template",
     "publishedAt": "2026-04-02T08:30:00Z",
