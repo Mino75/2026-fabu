@@ -62,6 +62,47 @@ async function ensureDataLayout() {
 // Generic helpers
 // --------------------------------------------------
 
+async function seedDataDirIfEmpty() {
+  const runtimeIndexPath = path.join(DATA_DIR, "article.index.json");
+  const bundledDataDir = path.join(ROOT_DIR, "data");
+  const bundledIndexPath = path.join(bundledDataDir, "article.index.json");
+
+  const runtimeIndex = await readJsonFile(runtimeIndexPath, []);
+
+  const runtimeFiles = await fsp.readdir(DATA_DIR).catch(() => []);
+  const hasOnlyEmptyIndex =
+    runtimeFiles.length <= 1 &&
+    Array.isArray(runtimeIndex) &&
+    runtimeIndex.length === 0;
+
+  if (!hasOnlyEmptyIndex) {
+    return;
+  }
+
+  const bundledIndex = await readJsonFile(bundledIndexPath, []);
+
+  if (!Array.isArray(bundledIndex) || bundledIndex.length === 0) {
+    return;
+  }
+
+  const bundledFiles = await fsp.readdir(bundledDataDir);
+
+  for (const fileName of bundledFiles) {
+    const sourcePath = path.join(bundledDataDir, fileName);
+    const targetPath = path.join(DATA_DIR, fileName);
+
+    const stat = await fsp.stat(sourcePath);
+    if (!stat.isFile()) {
+      continue;
+    }
+
+    const exists = await fsp.access(targetPath).then(() => true).catch(() => false);
+    if (!exists) {
+      await fsp.copyFile(sourcePath, targetPath);
+    }
+  }
+}
+
 function normalizeLanguage(value) {
   const raw = String(value || "").trim();
   return SUPPORTED_LANGUAGES.has(raw) ? raw : "en";
@@ -830,6 +871,7 @@ app.use(express.static(ROOT_DIR));
 // --------------------------------------------------
 
 ensureDataLayout()
+  .then(seedDataDirIfEmpty)
   .then(() => {
     app.listen(PORT, () => {
       console.log(`Server running at http://localhost:${PORT}`);
