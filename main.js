@@ -1,14 +1,221 @@
 const app = document.getElementById("app");
 
-const INDEX_URL = "./articles.json";
-const DB_NAME = "fabu-db";
-const DB_VERSION = 1;
-const INDEX_STORE = "article_index";
-const ARTICLE_STORE = "articles";
+const APP_CONFIG = window.__APP_CONFIG__ || {};
+const CONTENT_TYPE = APP_CONFIG.defaultContentType || "article";
+const INDEX_URL = `/content/${encodeURIComponent(CONTENT_TYPE)}/index.json`;
 
-// -----------------------------
+const DB_NAME = "fabu-db";
+const DB_VERSION = 2;
+const INDEX_STORE = "content_index";
+const RECORD_STORE = "content_records";
+
+const DEFAULT_PAGE_SIZE = 50;
+const MAX_PAGE_SIZE = 500;
+
+const I18N = {
+  en: {
+    heroBadge: "Lightweight Publisher",
+    heroTitle: "Articles",
+    heroText: "Fast public publishing with search, filters, offline sync, and local-first rendering.",
+    searchLabel: "Search",
+    searchPlaceholder: "Search by title, excerpt, tag...",
+    filterLabel: "Filter",
+    allTags: "All tags",
+    sortLabel: "Sort by date",
+    newestFirst: "Newest first",
+    oldestFirst: "Oldest first",
+    loadMore: "Load more",
+    readArticle: "Read article",
+    backToArticles: "← Back to articles",
+    loadingArticle: "Loading article...",
+    notFoundTitle: "Not found",
+    notFoundText: "The requested resource could not be found.",
+    goBackHome: "Go back home",
+    unableToLoadArticles: "Unable to load articles",
+    unableToLoadArticle: "Unable to load article",
+    noMatchingArticlesTitle: "No matching articles",
+    noMatchingArticlesText: "Try a different search term or filter.",
+    articleCount: count => `${count} article${count === 1 ? "" : "s"}`,
+    showingCount: (shown, total) => `Showing ${shown} of ${total}`,
+    untitled: "Untitled"
+  },
+  fr: {
+    heroBadge: "Éditeur léger",
+    heroTitle: "Articles",
+    heroText: "Publication rapide avec recherche, filtres, synchronisation hors ligne et rendu local.",
+    searchLabel: "Rechercher",
+    searchPlaceholder: "Rechercher par titre, extrait, tag...",
+    filterLabel: "Filtrer",
+    allTags: "Tous les tags",
+    sortLabel: "Trier par date",
+    newestFirst: "Plus récents d’abord",
+    oldestFirst: "Plus anciens d’abord",
+    loadMore: "Afficher plus",
+    readArticle: "Lire l’article",
+    backToArticles: "← Retour aux articles",
+    loadingArticle: "Chargement de l’article...",
+    notFoundTitle: "Introuvable",
+    notFoundText: "La ressource demandée est introuvable.",
+    goBackHome: "Retour à l’accueil",
+    unableToLoadArticles: "Impossible de charger les articles",
+    unableToLoadArticle: "Impossible de charger l’article",
+    noMatchingArticlesTitle: "Aucun article correspondant",
+    noMatchingArticlesText: "Essayez une autre recherche ou un autre filtre.",
+    articleCount: count => `${count} article${count === 1 ? "" : "s"}`,
+    showingCount: (shown, total) => `${shown} affiché(s) sur ${total}`,
+    untitled: "Sans titre"
+  },
+  mg: {
+    heroBadge: "Mpanonta maivana",
+    heroTitle: "Lahatsoratra",
+    heroText: "Famoahana haingana miaraka amin’ny fikarohana, sivana, sync offline ary rendu eo an-toerana.",
+    searchLabel: "Hikaroka",
+    searchPlaceholder: "Hikaroka amin’ny lohateny, famintinana, tag...",
+    filterLabel: "Sivana",
+    allTags: "Tag rehetra",
+    sortLabel: "Alahatra araka ny daty",
+    newestFirst: "Vaovao indrindra aloha",
+    oldestFirst: "Tranainy indrindra aloha",
+    loadMore: "Asehoy misimisy kokoa",
+    readArticle: "Vakio ny lahatsoratra",
+    backToArticles: "← Hiverina amin’ny lahatsoratra",
+    loadingArticle: "Ampidirina ny lahatsoratra...",
+    notFoundTitle: "Tsy hita",
+    notFoundText: "Tsy hita ilay loharano nangatahana.",
+    goBackHome: "Hiverina amin’ny fandraisana",
+    unableToLoadArticles: "Tsy afaka mampiditra lahatsoratra",
+    unableToLoadArticle: "Tsy afaka mampiditra lahatsoratra",
+    noMatchingArticlesTitle: "Tsy misy lahatsoratra mifanaraka",
+    noMatchingArticlesText: "Andramo teny fikarohana na sivana hafa.",
+    articleCount: count => `${count} lahatsoratra`,
+    showingCount: (shown, total) => `Aseho ${shown} amin’ny ${total}`,
+    untitled: "Tsy misy lohateny"
+  },
+  "zh-CN": {
+    heroBadge: "轻量发布",
+    heroTitle: "文章",
+    heroText: "支持搜索、筛选、离线同步和本地优先渲染的快速发布。",
+    searchLabel: "搜索",
+    searchPlaceholder: "按标题、摘要、标签搜索...",
+    filterLabel: "筛选",
+    allTags: "全部标签",
+    sortLabel: "按日期排序",
+    newestFirst: "最新优先",
+    oldestFirst: "最早优先",
+    loadMore: "加载更多",
+    readArticle: "阅读文章",
+    backToArticles: "← 返回文章列表",
+    loadingArticle: "正在加载文章...",
+    notFoundTitle: "未找到",
+    notFoundText: "未找到请求的资源。",
+    goBackHome: "返回首页",
+    unableToLoadArticles: "无法加载文章",
+    unableToLoadArticle: "无法加载文章",
+    noMatchingArticlesTitle: "没有匹配的文章",
+    noMatchingArticlesText: "请尝试其他搜索词或筛选条件。",
+    articleCount: count => `${count} 篇文章`,
+    showingCount: (shown, total) => `显示 ${shown} / ${total}`,
+    untitled: "未命名"
+  },
+  ru: {
+    heroBadge: "Лёгкая публикация",
+    heroTitle: "Статьи",
+    heroText: "Быстрая публикация с поиском, фильтрами, офлайн-синхронизацией и локальным рендерингом.",
+    searchLabel: "Поиск",
+    searchPlaceholder: "Искать по заголовку, описанию, тегу...",
+    filterLabel: "Фильтр",
+    allTags: "Все теги",
+    sortLabel: "Сортировать по дате",
+    newestFirst: "Сначала новые",
+    oldestFirst: "Сначала старые",
+    loadMore: "Показать ещё",
+    readArticle: "Читать статью",
+    backToArticles: "← Назад к статьям",
+    loadingArticle: "Загрузка статьи...",
+    notFoundTitle: "Не найдено",
+    notFoundText: "Запрошенный ресурс не найден.",
+    goBackHome: "Вернуться на главную",
+    unableToLoadArticles: "Не удалось загрузить статьи",
+    unableToLoadArticle: "Не удалось загрузить статью",
+    noMatchingArticlesTitle: "Подходящих статей нет",
+    noMatchingArticlesText: "Попробуйте другой запрос или фильтр.",
+    articleCount: count => `${count} ${pluralizeRuArticles(count)}`,
+    showingCount: (shown, total) => `Показано ${shown} из ${total}`,
+    untitled: "Без названия"
+  },
+  ja: {
+    heroBadge: "軽量パブリッシング",
+    heroTitle: "記事",
+    heroText: "検索、フィルター、オフライン同期、ローカル優先レンダリングに対応した高速公開。",
+    searchLabel: "検索",
+    searchPlaceholder: "タイトル、概要、タグで検索...",
+    filterLabel: "絞り込み",
+    allTags: "すべてのタグ",
+    sortLabel: "日付順",
+    newestFirst: "新しい順",
+    oldestFirst: "古い順",
+    loadMore: "もっと見る",
+    readArticle: "記事を読む",
+    backToArticles: "← 記事一覧へ戻る",
+    loadingArticle: "記事を読み込み中...",
+    notFoundTitle: "見つかりません",
+    notFoundText: "要求されたリソースは見つかりませんでした。",
+    goBackHome: "ホームへ戻る",
+    unableToLoadArticles: "記事を読み込めません",
+    unableToLoadArticle: "記事を読み込めません",
+    noMatchingArticlesTitle: "一致する記事がありません",
+    noMatchingArticlesText: "別の検索語またはフィルターを試してください。",
+    articleCount: count => `${count}件の記事`,
+    showingCount: (shown, total) => `${total}件中 ${shown}件を表示`,
+    untitled: "無題"
+  },
+  es: {
+    heroBadge: "Publicación ligera",
+    heroTitle: "Artículos",
+    heroText: "Publicación rápida con búsqueda, filtros, sincronización offline y renderizado local.",
+    searchLabel: "Buscar",
+    searchPlaceholder: "Buscar por título, extracto, etiqueta...",
+    filterLabel: "Filtrar",
+    allTags: "Todas las etiquetas",
+    sortLabel: "Ordenar por fecha",
+    newestFirst: "Más recientes primero",
+    oldestFirst: "Más antiguos primero",
+    loadMore: "Cargar más",
+    readArticle: "Leer artículo",
+    backToArticles: "← Volver a los artículos",
+    loadingArticle: "Cargando artículo...",
+    notFoundTitle: "No encontrado",
+    notFoundText: "No se pudo encontrar el recurso solicitado.",
+    goBackHome: "Volver al inicio",
+    unableToLoadArticles: "No se pudieron cargar los artículos",
+    unableToLoadArticle: "No se pudo cargar el artículo",
+    noMatchingArticlesTitle: "No hay artículos coincidentes",
+    noMatchingArticlesText: "Prueba otra búsqueda o filtro.",
+    articleCount: count => `${count} artículo${count === 1 ? "" : "s"}`,
+    showingCount: (shown, total) => `Mostrando ${shown} de ${total}`,
+    untitled: "Sin título"
+  }
+};
+
+function pluralizeRuArticles(count) {
+  const mod10 = count % 10;
+  const mod100 = count % 100;
+
+  if (mod10 === 1 && mod100 !== 11) return "статья";
+  if (mod10 >= 2 && mod10 <= 4 && (mod100 < 12 || mod100 > 14)) return "статьи";
+  return "статей";
+}
+
+function getTranslations() {
+  const language = String(APP_CONFIG.siteLanguage || "en").trim();
+  return I18N[language] || I18N.en;
+}
+
+const t = getTranslations();
+
+// --------------------------------------------------
 // IndexedDB
-// -----------------------------
+// --------------------------------------------------
 
 function openDatabase() {
   return new Promise((resolve, reject) => {
@@ -21,9 +228,11 @@ function openDatabase() {
         db.createObjectStore(INDEX_STORE, { keyPath: "key" });
       }
 
-      if (!db.objectStoreNames.contains(ARTICLE_STORE)) {
-        const store = db.createObjectStore(ARTICLE_STORE, { keyPath: "slug" });
-        store.createIndex("publishedAt", "publishedAt", { unique: false });
+      if (!db.objectStoreNames.contains(RECORD_STORE)) {
+        const store = db.createObjectStore(RECORD_STORE, { keyPath: "key" });
+        store.createIndex("slug", "slug", { unique: false });
+        store.createIndex("type", "type", { unique: false });
+        store.createIndex("updatedAt", "updatedAt", { unique: false });
       }
     };
 
@@ -64,93 +273,111 @@ function requestToPromise(request) {
   });
 }
 
-async function saveIndexToDb(items) {
+function getIndexStoreKey(type) {
+  return `${type}:main`;
+}
+
+function getRecordStoreKey(type, slug) {
+  return `${type}:${slug}`;
+}
+
+async function saveIndexToDb(type, items) {
   const normalizedItems = Array.isArray(items)
-    ? items.map(normalizeIndexItem)
+    ? items.map(item => normalizeIndexItem(item, type))
     : [];
 
   await withStore(INDEX_STORE, "readwrite", async store => {
     store.put({
-      key: "main",
+      key: getIndexStoreKey(type),
+      type,
       items: normalizedItems,
       savedAt: new Date().toISOString()
     });
   });
 }
 
-async function readIndexFromDb() {
+async function readIndexFromDb(type) {
   return withStore(INDEX_STORE, "readonly", async store => {
-    const record = await requestToPromise(store.get("main"));
+    const record = await requestToPromise(store.get(getIndexStoreKey(type)));
     return record?.items || [];
   });
 }
 
-async function saveArticleToDb(article) {
-  const normalized = normalizeArticle(article);
+async function saveRecordToDb(type, record) {
+  const normalized = normalizeRecord(record, type);
 
-  await withStore(ARTICLE_STORE, "readwrite", async store => {
+  await withStore(RECORD_STORE, "readwrite", async store => {
     store.put({
+      key: getRecordStoreKey(type, normalized.slug),
       ...normalized,
       savedAt: new Date().toISOString()
     });
   });
 }
 
-async function readArticleFromDb(slug) {
-  return withStore(ARTICLE_STORE, "readonly", async store => {
-    return requestToPromise(store.get(slug));
+async function readRecordFromDb(type, slug) {
+  return withStore(RECORD_STORE, "readonly", async store => {
+    return requestToPromise(store.get(getRecordStoreKey(type, slug)));
   });
 }
 
-// -----------------------------
+// --------------------------------------------------
 // Data normalization
-// -----------------------------
+// --------------------------------------------------
 
-function normalizeArticleFilePath(file, slug) {
-  const raw = String(file || "").trim();
-
-  if (raw.startsWith("/")) {
-    return raw;
-  }
-
-  if (raw.startsWith("./")) {
-    return "/" + raw.slice(2);
-  }
-
-  if (raw) {
-    return "/" + raw.replace(/^\/+/, "");
-  }
-
-  return "/" + String(slug || "").trim() + ".article.json";
-}
-
-function normalizeIndexItem(item) {
+function normalizeIndexItem(item, type = CONTENT_TYPE) {
   const slug = String(item?.slug || "").trim();
 
   return {
+    type,
     slug,
     title: String(item?.title || "").trim(),
     excerpt: String(item?.excerpt || "").trim(),
-    publishedAt: String(item?.publishedAt || item?.date || "").trim(),
+    publishedAt: String(item?.publishedAt || "").trim(),
+    createdAt: String(item?.createdAt || "").trim(),
+    updatedAt: String(item?.updatedAt || item?.createdAt || "").trim(),
     tags: Array.isArray(item?.tags) ? item.tags.map(String) : [],
-    file: normalizeArticleFilePath(item?.file, slug)
+    file: String(item?.file || buildRecordUrl(type, slug)).trim()
   };
 }
 
-function normalizeArticle(article) {
+function normalizeRecord(record, type = CONTENT_TYPE) {
   return {
-    slug: String(article?.slug || "").trim(),
-    title: String(article?.title || "").trim(),
-    excerpt: String(article?.excerpt || "").trim(),
-    publishedAt: String(article?.publishedAt || article?.date || "").trim(),
-    tags: Array.isArray(article?.tags) ? article.tags.map(String) : [],
-    html: String(article?.html || "")
+    type,
+    slug: String(record?.slug || "").trim(),
+    title: String(record?.title || "").trim(),
+    excerpt: String(record?.excerpt || "").trim(),
+    publishedAt: String(record?.publishedAt || "").trim(),
+    createdAt: String(record?.createdAt || "").trim(),
+    updatedAt: String(record?.updatedAt || record?.createdAt || "").trim(),
+    tags: Array.isArray(record?.tags) ? record.tags.map(String) : [],
+    html: String(record?.html || "")
   };
 }
 
-// -----------------------------
+function buildRecordUrl(type, slug) {
+  return `/content/${encodeURIComponent(type)}/${encodeURIComponent(slug)}.json`;
+}
+
+function getComparableTimestamp(value) {
+  const ts = Date.parse(String(value || "").trim());
+  return Number.isNaN(ts) ? 0 : ts;
+}
+
+function isRemoteRecordNewer(remoteMeta, localRecord) {
+  if (!localRecord) {
+    return true;
+  }
+
+  const remoteUpdated = getComparableTimestamp(remoteMeta.updatedAt || remoteMeta.createdAt);
+  const localUpdated = getComparableTimestamp(localRecord.updatedAt || localRecord.createdAt);
+
+  return remoteUpdated > localUpdated;
+}
+
+// --------------------------------------------------
 // HTTP
-// -----------------------------
+// --------------------------------------------------
 
 async function fetchJson(url) {
   const response = await fetch(url, {
@@ -167,19 +394,44 @@ async function fetchJson(url) {
   return response.json();
 }
 
-async function loadArticlesIndex() {
-  try {
-    const remoteItems = await fetchJson(INDEX_URL);
-
-    if (!Array.isArray(remoteItems)) {
-      throw new Error("articles.json must contain an array.");
+async function syncChangedRecordsFromIndex(type, indexItems) {
+  for (const item of indexItems) {
+    if (!item.slug || !item.file) {
+      continue;
     }
 
-    const normalized = remoteItems.map(normalizeIndexItem);
-    await saveIndexToDb(normalized);
+    try {
+      const localRecord = await readRecordFromDb(type, item.slug);
+
+      if (!isRemoteRecordNewer(item, localRecord)) {
+        continue;
+      }
+
+      const remoteRecord = await fetchJson(item.file);
+      const normalized = normalizeRecord(remoteRecord, type);
+      await saveRecordToDb(type, normalized);
+    } catch {
+      // Keep sync resilient and non-blocking.
+    }
+  }
+}
+
+async function loadContentIndex(type) {
+  try {
+    const remoteItems = await fetchJson(`/content/${encodeURIComponent(type)}/index.json`);
+
+    if (!Array.isArray(remoteItems)) {
+      throw new Error("Index endpoint must return an array.");
+    }
+
+    const normalized = remoteItems.map(item => normalizeIndexItem(item, type));
+    await saveIndexToDb(type, normalized);
+
+    syncChangedRecordsFromIndex(type, normalized).catch(() => {});
+
     return normalized;
   } catch (networkError) {
-    const offlineItems = await readIndexFromDb();
+    const offlineItems = await readIndexFromDb(type);
 
     if (offlineItems.length) {
       return offlineItems;
@@ -189,38 +441,43 @@ async function loadArticlesIndex() {
   }
 }
 
-async function loadArticleBySlug(slug) {
-  const indexItems = await loadArticlesIndex();
+async function loadRecordBySlug(type, slug) {
+  const indexItems = await loadContentIndex(type);
   const indexItem = indexItems.find(item => item.slug === slug);
+  const offlineRecord = await readRecordFromDb(type, slug);
 
-  if (!indexItem || !indexItem.file) {
-    const offlineArticle = await readArticleFromDb(slug);
-    return offlineArticle || null;
+  if (!indexItem) {
+    return offlineRecord || null;
+  }
+
+  if (offlineRecord && !isRemoteRecordNewer(indexItem, offlineRecord)) {
+    return offlineRecord;
   }
 
   try {
-    const remoteArticle = await fetchJson(indexItem.file);
-    const normalized = normalizeArticle({
-      ...indexItem,
-      ...remoteArticle
-    });
+    const remoteRecord = await fetchJson(indexItem.file);
+    const normalized = normalizeRecord(
+      {
+        ...indexItem,
+        ...remoteRecord
+      },
+      type
+    );
 
-    await saveArticleToDb(normalized);
+    await saveRecordToDb(type, normalized);
     return normalized;
   } catch (networkError) {
-    const offlineArticle = await readArticleFromDb(slug);
-
-    if (offlineArticle) {
-      return offlineArticle;
+    if (offlineRecord) {
+      return offlineRecord;
     }
 
     throw networkError;
   }
 }
 
-// -----------------------------
+// --------------------------------------------------
 // UI helpers
-// -----------------------------
+// --------------------------------------------------
 
 function qs(selector, root = document) {
   return root.querySelector(selector);
@@ -236,7 +493,7 @@ function normalizeText(value) {
 }
 
 function articleUrl(slug) {
-  return "/article/" + encodeURIComponent(slug);
+  return `/article/${encodeURIComponent(slug)}`;
 }
 
 function navigateTo(url) {
@@ -251,17 +508,19 @@ function formatDate(value) {
     return "";
   }
 
-  return new Intl.DateTimeFormat("en", {
+  return new Intl.DateTimeFormat(undefined, {
     day: "2-digit",
     month: "long",
-    year: "numeric"
+    year: "numeric",
+    hour: "2-digit",
+    minute: "2-digit"
   }).format(date);
 }
 
-function sortArticlesByDate(items, order = "desc") {
+function sortItemsByDate(items, order = "desc") {
   return [...items].sort((a, b) => {
-    const dateA = new Date(a.publishedAt || 0).getTime();
-    const dateB = new Date(b.publishedAt || 0).getTime();
+    const dateA = getComparableTimestamp(a.publishedAt || a.updatedAt || a.createdAt);
+    const dateB = getComparableTimestamp(b.publishedAt || b.updatedAt || b.createdAt);
     return order === "asc" ? dateA - dateB : dateB - dateA;
   });
 }
@@ -273,7 +532,7 @@ function getUniqueTags(items) {
     (item.tags || []).forEach(tag => tags.add(tag));
   });
 
-  return [...tags].sort((a, b) => a.localeCompare(b, "en"));
+  return [...tags].sort((a, b) => a.localeCompare(b, undefined, { sensitivity: "base" }));
 }
 
 function renderTagList(container, tags) {
@@ -323,9 +582,26 @@ function sanitizeHtml(html) {
   return template.innerHTML;
 }
 
-// -----------------------------
+function escapeHtml(value) {
+  const div = document.createElement("div");
+  div.textContent = String(value || "");
+  return div.innerHTML;
+}
+
+function getPageSize() {
+  const url = new URL(window.location.href);
+  const raw = Number(url.searchParams.get("pageSize") || DEFAULT_PAGE_SIZE);
+
+  if (!Number.isFinite(raw)) {
+    return DEFAULT_PAGE_SIZE;
+  }
+
+  return Math.max(1, Math.min(MAX_PAGE_SIZE, Math.floor(raw)));
+}
+
+// --------------------------------------------------
 // Routing
-// -----------------------------
+// --------------------------------------------------
 
 function getRoute() {
   const path = window.location.pathname.replace(/\/+$/, "") || "/";
@@ -344,87 +620,111 @@ function getRoute() {
   return { name: "not-found" };
 }
 
-// -----------------------------
+// --------------------------------------------------
 // Views
-// -----------------------------
+// --------------------------------------------------
 
 function renderHomeError(error) {
   app.innerHTML = `
     <main class="page-shell narrow-shell">
       <section class="surface empty-state">
-        <h1>Unable to load articles</h1>
+        <h1>${escapeHtml(t.unableToLoadArticles)}</h1>
         <p>${escapeHtml(error.message || "Unknown error")}</p>
       </section>
     </main>
   `;
-  document.title = "Error · Publisher";
+  document.title = `${t.unableToLoadArticles} · ${APP_CONFIG.siteTitle || "Publisher"}`;
 }
 
 function renderArticleError(message) {
   app.innerHTML = `
     <main class="page-shell article-shell">
       <section class="surface empty-state">
-        <h1>Unable to load article</h1>
+        <h1>${escapeHtml(t.unableToLoadArticle)}</h1>
         <p>${escapeHtml(message || "Unknown error")}</p>
-        <a href="/" data-link class="button-link">Go back home</a>
+        <a href="/" data-link class="button-link">${escapeHtml(t.goBackHome)}</a>
       </section>
     </main>
   `;
-  document.title = "Error · Publisher";
-}
-
-function escapeHtml(value) {
-  const div = document.createElement("div");
-  div.textContent = String(value || "");
-  return div.innerHTML;
+  document.title = `${t.unableToLoadArticle} · ${APP_CONFIG.siteTitle || "Publisher"}`;
 }
 
 async function renderHome() {
   try {
-    const articles = await loadArticlesIndex();
+    const items = await loadContentIndex(CONTENT_TYPE);
     const view = cloneTemplate("tpl-home");
     app.replaceChildren(view);
 
-    const searchInput = qs("#searchInput");
+    qs("#heroBadge").textContent = t.heroBadge;
+    qs("#heroTitle").textContent = t.heroTitle;
+    qs("#heroText").textContent = t.heroText;
+
+    qs("#searchLabel").textContent = t.searchLabel;
+    qs("#searchInput").placeholder = t.searchPlaceholder;
+
+    qs("#tagLabel").textContent = t.filterLabel;
+    qs("#sortLabel").textContent = t.sortLabel;
+
     const tagSelect = qs("#tagSelect");
     const sortSelect = qs("#sortSelect");
-    const resultsCount = qs("#resultsCount");
-    const articleList = qs("#articleList");
 
-    getUniqueTags(articles).forEach(tag => {
+    qs("#tagOptionAll").textContent = t.allTags;
+    qs("#sortNewest").textContent = t.newestFirst;
+    qs("#sortOldest").textContent = t.oldestFirst;
+
+    const searchInput = qs("#searchInput");
+    const resultsCount = qs("#resultsCount");
+    const showingCount = qs("#showingCount");
+    const articleList = qs("#articleList");
+    const loadMoreButton = qs("#loadMoreButton");
+
+    let visibleCount = getPageSize();
+    let currentFiltered = [];
+
+    getUniqueTags(items).forEach(tag => {
       const option = document.createElement("option");
       option.value = tag;
       option.textContent = tag;
       tagSelect.appendChild(option);
     });
 
-    function renderCards(items) {
+    function renderCards(itemsToRender) {
       articleList.innerHTML = "";
 
-      if (!items.length) {
+      if (!itemsToRender.length) {
         articleList.innerHTML = `
           <section class="surface empty-state">
-            <h2>No matching articles</h2>
-            <p>Try a different search term or tag filter.</p>
+            <h2>${escapeHtml(t.noMatchingArticlesTitle)}</h2>
+            <p>${escapeHtml(t.noMatchingArticlesText)}</p>
           </section>
         `;
+        loadMoreButton.hidden = true;
+        showingCount.textContent = "";
         return;
       }
 
-      items.forEach(article => {
+      const slice = itemsToRender.slice(0, visibleCount);
+
+      slice.forEach(article => {
         const card = cloneTemplate("tpl-card");
 
-        qs(".card-date", card).textContent = formatDate(article.publishedAt);
-        qs(".card-title", card).textContent = article.title || "Untitled";
+        qs(".card-date", card).textContent = formatDate(article.publishedAt || article.updatedAt);
+        qs(".card-title", card).textContent = article.title || t.untitled;
         qs(".card-excerpt", card).textContent = article.excerpt || "";
 
         const link = qs(".card-link", card);
         link.href = articleUrl(article.slug);
         link.setAttribute("data-link", "");
+        link.textContent = t.readArticle;
 
         renderTagList(qs(".tag-list", card), article.tags || []);
         articleList.appendChild(card);
       });
+
+      resultsCount.textContent = t.articleCount(itemsToRender.length);
+      showingCount.textContent = t.showingCount(slice.length, itemsToRender.length);
+      loadMoreButton.hidden = slice.length >= itemsToRender.length;
+      loadMoreButton.textContent = t.loadMore;
     }
 
     function applyFilters() {
@@ -432,35 +732,45 @@ async function renderHome() {
       const selectedTag = normalizeText(tagSelect.value);
       const sortOrder = sortSelect.value;
 
-      let filtered = articles.filter(article => {
+      let filtered = items.filter(item => {
         const haystack = normalizeText([
-          article.title,
-          article.excerpt,
-          (article.tags || []).join(" "),
-          article.publishedAt
+          item.title,
+          item.excerpt,
+          (item.tags || []).join(" "),
+          item.publishedAt,
+          item.updatedAt
         ].join(" "));
 
         const matchesQuery = !query || haystack.includes(query);
         const matchesTag =
           !selectedTag ||
-          (article.tags || []).some(tag => normalizeText(tag) === selectedTag);
+          (item.tags || []).some(tag => normalizeText(tag) === selectedTag);
 
         return matchesQuery && matchesTag;
       });
 
-      filtered = sortArticlesByDate(filtered, sortOrder);
+      filtered = sortItemsByDate(filtered, sortOrder);
+      currentFiltered = filtered;
+      visibleCount = Math.min(visibleCount, Math.max(getPageSize(), filtered.length || getPageSize()));
       renderCards(filtered);
-
-      resultsCount.textContent =
-        filtered.length + " article" + (filtered.length === 1 ? "" : "s");
     }
 
-    searchInput.addEventListener("input", applyFilters);
-    tagSelect.addEventListener("change", applyFilters);
-    sortSelect.addEventListener("change", applyFilters);
+    function resetAndApplyFilters() {
+      visibleCount = getPageSize();
+      applyFilters();
+    }
+
+    searchInput.addEventListener("input", resetAndApplyFilters);
+    tagSelect.addEventListener("change", resetAndApplyFilters);
+    sortSelect.addEventListener("change", resetAndApplyFilters);
+
+    loadMoreButton.addEventListener("click", () => {
+      visibleCount += getPageSize();
+      renderCards(currentFiltered);
+    });
 
     applyFilters();
-    document.title = "Publisher";
+    document.title = APP_CONFIG.siteTitle || "Publisher";
   } catch (error) {
     renderHomeError(error);
   }
@@ -468,7 +778,7 @@ async function renderHome() {
 
 async function renderArticlePage(slug) {
   try {
-    const article = await loadArticleBySlug(slug);
+    const article = await loadRecordBySlug(CONTENT_TYPE, slug);
 
     if (!article) {
       renderNotFound();
@@ -478,8 +788,9 @@ async function renderArticlePage(slug) {
     const view = cloneTemplate("tpl-article");
     app.replaceChildren(view);
 
-    qs("#articleDate").textContent = formatDate(article.publishedAt);
-    qs("#articleTitle").textContent = article.title || "Untitled";
+    qs("#backToArticles").textContent = t.backToArticles;
+    qs("#articleDate").textContent = formatDate(article.publishedAt || article.updatedAt);
+    qs("#articleTitle").textContent = article.title || t.untitled;
     qs("#articleExcerpt").textContent = article.excerpt || "";
 
     renderTagList(qs("#articleTags"), article.tags || []);
@@ -487,7 +798,7 @@ async function renderArticlePage(slug) {
     const articleBody = qs("#articleBody");
     articleBody.innerHTML = sanitizeHtml(article.html);
 
-    document.title = (article.title || "Article") + " · Publisher";
+    document.title = `${article.title || t.untitled} · ${APP_CONFIG.siteTitle || "Publisher"}`;
   } catch (error) {
     renderArticleError(error.message);
   }
@@ -496,12 +807,17 @@ async function renderArticlePage(slug) {
 function renderNotFound() {
   const view = cloneTemplate("tpl-not-found");
   app.replaceChildren(view);
-  document.title = "Not found · Publisher";
+
+  qs("#notFoundTitle").textContent = t.notFoundTitle;
+  qs("#notFoundText").textContent = t.notFoundText;
+  qs("#notFoundBackHome").textContent = t.goBackHome;
+
+  document.title = `${t.notFoundTitle} · ${APP_CONFIG.siteTitle || "Publisher"}`;
 }
 
-// -----------------------------
+// --------------------------------------------------
 // App
-// -----------------------------
+// --------------------------------------------------
 
 async function render() {
   const route = getRoute();
