@@ -9,19 +9,72 @@ const app = express();
 // Config
 // --------------------------------------------------
 
-const CACHE_VERSION = process.env.CACHE_VERSION || "v2";
-const APP_NAME = process.env.APP_NAME || "karaoke";
-const PORT = process.env.PORT || 3000;
-const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD || "";
+const PORT = Number(process.env.PORT || 3000);
+const ADMIN_PASSWORD = String(process.env.ADMIN_PASSWORD || "").trim();
 
 const ROOT_DIR = __dirname;
-const INDEX_FILE_PATH = path.join(ROOT_DIR, "articles.json");
+const DATA_DIR = process.env.DATA_DIR || path.join(ROOT_DIR, "data");
+
+const CACHE_VERSION = process.env.CACHE_VERSION || "v2";
+const APP_NAME = process.env.APP_NAME || "fabu";
+
+const SITE_TITLE = process.env.SITE_TITLE || "Publisher";
+const SITE_DESCRIPTION =
+  process.env.SITE_DESCRIPTION ||
+  "A minimal publication frontend with offline sync and local-first rendering.";
+const SITE_LANGUAGE = normalizeLanguage(process.env.SITE_LANGUAGE || "en");
+
+const DEFAULT_CONTENT_TYPE = normalizeType(process.env.DEFAULT_CONTENT_TYPE || "article") || "article";
+
+const FAVICON_BASE64 = process.env.FAVICON_BASE64 || "";
+const ICON_192_BASE64 = process.env.ICON_192_BASE64 || "";
+const ICON_512_BASE64 = process.env.ICON_512_BASE64 || "";
+
+const SUPPORTED_LANGUAGES = new Set(["en", "fr", "mg", "zh-CN", "ru", "ja", "es"]);
+const SUPPORTED_TYPES = new Set(["article"]);
 
 app.use(express.json({ limit: "2mb" }));
 
 // --------------------------------------------------
-// Helpers
+// Bootstrap
 // --------------------------------------------------
+
+async function ensureDataLayout() {
+  await fsp.mkdir(DATA_DIR, { recursive: true });
+
+  for (const type of SUPPORTED_TYPES) {
+    const indexPath = getIndexFilePath(type);
+    try {
+      await fsp.access(indexPath);
+    } catch {
+      await writeJsonFileAtomic(indexPath, []);
+    }
+  }
+}
+
+// --------------------------------------------------
+// Generic helpers
+// --------------------------------------------------
+
+function normalizeLanguage(value) {
+  const raw = String(value || "").trim();
+  return SUPPORTED_LANGUAGES.has(raw) ? raw : "en";
+}
+
+function normalizeType(value) {
+  return String(value || "")
+    .trim()
+    .toLowerCase()
+    .replace(/[^a-z0-9_-]+/g, "");
+}
+
+function ensureSupportedType(type) {
+  const normalized = normalizeType(type);
+  if (!normalized || !SUPPORTED_TYPES.has(normalized)) {
+    throw new Error(`Unsupported content type "${type}".`);
+  }
+  return normalized;
+}
 
 function ensureAdminPasswordConfigured() {
   if (!ADMIN_PASSWORD) {
@@ -32,7 +85,7 @@ function ensureAdminPasswordConfigured() {
 function adminAuth(req, res, next) {
   try {
     ensureAdminPasswordConfigured();
-  } catch (error) {
+  } catch {
     return res.status(500).json({
       ok: false,
       error: "Server admin password is not configured."
@@ -74,43 +127,68 @@ function normalizeTags(value) {
     .filter(Boolean);
 }
 
-function isValidIsoDate(value) {
+function isValidUtcIsoDate(value) {
   if (!isNonEmptyString(value)) {
     return false;
   }
 
-  const date = new Date(value);
-  return !Number.isNaN(date.getTime());
-}
+  const raw = String(value).trim();
+  const utcIsoPattern = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d{3})?Z$/;
 
-function getDefaultArticleFile(slug) {
-  return `./${slug}.article.json`;
-}
-
-function resolveArticleFilePath(fileValue) {
-  const normalized = String(fileValue || "").trim();
-
-  if (!normalized.endsWith(".json")) {
-    throw new Error("Article file must end with '.json'.");
+  if (!utcIsoPattern.test(raw)) {
+    return false;
   }
 
-  let relativePath;
+  return !Number.isNaN(Date.parse(raw));
+}
 
-  if (normalized.startsWith("/")) {
-    relativePath = "." + normalized;
-  } else if (normalized.startsWith("./")) {
-    relativePath = normalized;
-  } else {
-    relativePath = "./" + normalized.replace(/^\/+/, "");
+function nowUtcIso() {
+  return new Date().toISOString();
+}
+
+function getIndexFilePath(type) {
+  return path.join(DATA_DIR, `${type}.index.json`);
+}
+
+function getDefaultRecordFile(slug, type) {
+  return `${slug}.${type}.json`;
+}
+
+function buildPublicRecordPath(type, slug) {
+  return `/content/${encodeURIComponent(type)}/${encodeURIComponent(slug)}.json`;
+}
+
+function resolveRecordFilePathBySlug(type, slug) {
+  const safeType = ensureSupportedType(type);
+  const safeSlug = normalizeSlug(slug);
+
+  if (!safeSlug) {
+    throw new Error("A valid slug is required.");
   }
 
-  const resolved = path.resolve(ROOT_DIR, relativePath);
+  const fileName = getDefaultRecordFile(safeSlug, safeType);
+  const resolved = path.resolve(DATA_DIR, fileName);
 
-  if (!resolved.startsWith(ROOT_DIR)) {
-    throw new Error("Invalid article file path.");
+  if (!resolved.startsWith(DATA_DIR)) {
+    throw new Error("Invalid record path.");
   }
 
   return resolved;
+}
+
+function extractSlugFromRecordFile(type, fileValue) {
+  const safeType = ensureSupportedType(type);
+  const raw = String(fileValue || "").trim();
+  const expectedSuffix = `.${safeType}.json`;
+
+  if (!raw.endsWith(expectedSuffix)) {
+    throw new Error(`Record file must end with "${expectedSuffix}".`);
+  }
+
+  const fileName = path.basename(raw);
+  const slug = fileName.slice(0, -expectedSuffix.length);
+
+  return normalizeSlug(slug);
 }
 
 async function readJsonFile(filePath, fallback = null) {
@@ -126,6 +204,9 @@ async function readJsonFile(filePath, fallback = null) {
 }
 
 async function writeJsonFileAtomic(filePath, data) {
+  const dir = path.dirname(filePath);
+  await fsp.mkdir(dir, { recursive: true });
+
   const tempPath = `${filePath}.tmp`;
   const json = JSON.stringify(data, null, 2) + "\n";
 
@@ -133,60 +214,20 @@ async function writeJsonFileAtomic(filePath, data) {
   await fsp.rename(tempPath, filePath);
 }
 
-async function readArticlesIndex() {
-  const index = await readJsonFile(INDEX_FILE_PATH, []);
+async function readTypeIndex(type) {
+  const safeType = ensureSupportedType(type);
+  const index = await readJsonFile(getIndexFilePath(safeType), []);
 
   if (!Array.isArray(index)) {
-    throw new Error("articles.json must contain an array.");
+    throw new Error(`${safeType}.index.json must contain an array.`);
   }
 
   return index;
 }
 
-async function writeArticlesIndex(index) {
-  await writeJsonFileAtomic(INDEX_FILE_PATH, index);
-}
-
-function validateArticlePayload(payload, { requireHtml = true, requireSlug = true } = {}) {
-  const rawSlug = payload.slug;
-  const slug = normalizeSlug(rawSlug);
-
-  if (requireSlug && !slug) {
-    throw new Error("A valid slug is required.");
-  }
-
-  if (!isNonEmptyString(payload.title)) {
-    throw new Error("A non-empty title is required.");
-  }
-
-  const publishedAt = String(payload.publishedAt || payload.date || "").trim();
-  if (!isValidIsoDate(publishedAt)) {
-    throw new Error("A valid publishedAt date is required.");
-  }
-
-  const excerpt = String(payload.excerpt || "").trim();
-  const html = String(payload.html || "");
-
-  if (requireHtml && !html.trim()) {
-    throw new Error("A non-empty html field is required.");
-  }
-
-  const tags = normalizeTags(payload.tags);
-  const file = isNonEmptyString(payload.file)
-    ? String(payload.file).trim()
-    : getDefaultArticleFile(slug);
-
-  resolveArticleFilePath(file);
-
-  return {
-    slug,
-    title: String(payload.title).trim(),
-    publishedAt,
-    tags,
-    excerpt,
-    html,
-    file
-  };
+async function writeTypeIndex(type, index) {
+  const safeType = ensureSupportedType(type);
+  await writeJsonFileAtomic(getIndexFilePath(safeType), index);
 }
 
 function extractRequestedSlugs(req) {
@@ -211,97 +252,266 @@ function extractRequestedSlugs(req) {
   return [...new Set(slugs)];
 }
 
-function buildIndexEntry(article) {
+function sortIndexByUpdatedAtThenPublishedAt(items) {
+  return [...items].sort((a, b) => {
+    const updatedA = Date.parse(a.updatedAt || 0);
+    const updatedB = Date.parse(b.updatedAt || 0);
+    if (updatedB !== updatedA) {
+      return updatedB - updatedA;
+    }
+
+    const publishedA = Date.parse(a.publishedAt || 0);
+    const publishedB = Date.parse(b.publishedAt || 0);
+    return publishedB - publishedA;
+  });
+}
+
+function buildIndexEntry(type, record) {
+  const safeType = ensureSupportedType(type);
+
   return {
-    slug: article.slug,
-    title: article.title,
-    publishedAt: article.publishedAt,
-    tags: article.tags,
-    excerpt: article.excerpt,
-    file: article.file
+    type: safeType,
+    slug: record.slug,
+    title: record.title,
+    excerpt: record.excerpt,
+    publishedAt: record.publishedAt,
+    createdAt: record.createdAt,
+    updatedAt: record.updatedAt,
+    tags: Array.isArray(record.tags) ? record.tags : [],
+    file: buildPublicRecordPath(safeType, record.slug)
   };
 }
 
-async function loadArticleContent(entry) {
-  const fullPath = resolveArticleFilePath(entry.file);
-  return readJsonFile(fullPath);
+async function loadRecordContent(type, entry) {
+  const filePath = resolveRecordFilePathBySlug(type, entry.slug);
+  return readJsonFile(filePath);
 }
 
 // --------------------------------------------------
-// Existing main.js route with injected SW registration
+// Content validation
 // --------------------------------------------------
 
-app.get("/main.js", (req, res) => {
+function validateArticlePayload(payload, options = {}) {
+  const {
+    requireSlug = true,
+    requireHtml = true,
+    currentRecord = null
+  } = options;
+
+  const slug = normalizeSlug(payload.slug ?? currentRecord?.slug);
+
+  if (requireSlug && !slug) {
+    throw new Error("A valid slug is required.");
+  }
+
+  if (!isNonEmptyString(payload.title ?? currentRecord?.title)) {
+    throw new Error("A non-empty title is required.");
+  }
+
+  const publishedAt = String(payload.publishedAt ?? currentRecord?.publishedAt ?? "").trim();
+  if (!isValidUtcIsoDate(publishedAt)) {
+    throw new Error('A valid UTC ISO date is required for "publishedAt" (example: 2026-04-05T10:00:00Z).');
+  }
+
+  const html = String(payload.html ?? currentRecord?.html ?? "");
+  if (requireHtml && !html.trim()) {
+    throw new Error("A non-empty html field is required.");
+  }
+
+  const createdAt =
+    String(payload.createdAt ?? currentRecord?.createdAt ?? "").trim() || nowUtcIso();
+  if (!isValidUtcIsoDate(createdAt)) {
+    throw new Error('A valid UTC ISO date is required for "createdAt".');
+  }
+
+  const updatedAt =
+    String(payload.updatedAt ?? currentRecord?.updatedAt ?? "").trim() || nowUtcIso();
+  if (!isValidUtcIsoDate(updatedAt)) {
+    throw new Error('A valid UTC ISO date is required for "updatedAt".');
+  }
+
+  return {
+    type: "article",
+    slug,
+    title: String(payload.title ?? currentRecord?.title ?? "").trim(),
+    excerpt: String(payload.excerpt ?? currentRecord?.excerpt ?? "").trim(),
+    publishedAt,
+    createdAt,
+    updatedAt,
+    tags: normalizeTags(payload.tags ?? currentRecord?.tags),
+    html
+  };
+}
+
+function validateRecordPayload(type, payload, options = {}) {
+  const safeType = ensureSupportedType(type);
+
+  if (safeType === "article") {
+    return validateArticlePayload(payload, options);
+  }
+
+  throw new Error(`No validator is registered for "${safeType}".`);
+}
+
+// --------------------------------------------------
+// Branding assets
+// --------------------------------------------------
+
+function parseBase64Asset(rawValue, fallbackMime = "image/png") {
+  const raw = String(rawValue || "").trim();
+  if (!raw) {
+    return null;
+  }
+
+  let mimeType = fallbackMime;
+  let base64Payload = raw;
+
+  const dataUrlMatch = raw.match(/^data:([^;]+);base64,(.+)$/);
+  if (dataUrlMatch) {
+    mimeType = dataUrlMatch[1];
+    base64Payload = dataUrlMatch[2];
+  }
+
   try {
-    let jsContent = fs.readFileSync(path.join(ROOT_DIR, "main.js"), "utf8");
+    return {
+      mimeType,
+      buffer: Buffer.from(base64Payload, "base64")
+    };
+  } catch {
+    return null;
+  }
+}
 
-    const rescueCode = `
-// Cache Lock Rescue - Check for ${CACHE_VERSION} users and free older versions
-if ("serviceWorker" in navigator) {
-  caches.keys().then(cacheNames => {
-    const hasCurrentVersion = cacheNames.some(name => name.includes("-${CACHE_VERSION}"));
+function sendBase64Asset(res, rawValue, fallbackMime) {
+  const asset = parseBase64Asset(rawValue, fallbackMime);
 
-    if (!hasCurrentVersion && cacheNames.length > 0) {
-      console.log("Cache lock detected - rescuing to ${CACHE_VERSION}...");
-      navigator.serviceWorker.getRegistration().then(reg => {
-        if (reg) reg.unregister().then(() => location.reload());
+  if (!asset) {
+    res.status(404).end();
+    return;
+  }
+
+  res.setHeader("Content-Type", asset.mimeType);
+  res.setHeader("Cache-Control", "public, max-age=31536000, immutable");
+  res.send(asset.buffer);
+}
+
+// --------------------------------------------------
+// Dynamic app config / branding routes
+// --------------------------------------------------
+
+app.get("/app-config.js", (req, res) => {
+  const payload = {
+    siteTitle: SITE_TITLE,
+    siteDescription: SITE_DESCRIPTION,
+    siteLanguage: SITE_LANGUAGE,
+    defaultContentType: DEFAULT_CONTENT_TYPE
+  };
+
+  res.setHeader("Content-Type", "application/javascript; charset=utf-8");
+  res.setHeader("Cache-Control", "no-cache, no-store, must-revalidate");
+  res.send(`window.__APP_CONFIG__ = ${JSON.stringify(payload, null, 2)};\n`);
+});
+
+app.get("/manifest.webmanifest", (req, res) => {
+  const manifest = {
+    name: SITE_TITLE,
+    short_name: SITE_TITLE,
+    description: SITE_DESCRIPTION,
+    start_url: "/",
+    display: "standalone",
+    background_color: "#f7f8fb",
+    theme_color: "#2563eb",
+    icons: [
+      ICON_192_BASE64
+        ? {
+            src: "/icon-192.png",
+            sizes: "192x192",
+            type: "image/png"
+          }
+        : null,
+      ICON_512_BASE64
+        ? {
+            src: "/icon-512.png",
+            sizes: "512x512",
+            type: "image/png"
+          }
+        : null
+    ].filter(Boolean)
+  };
+
+  res.setHeader("Content-Type", "application/manifest+json; charset=utf-8");
+  res.setHeader("Cache-Control", "no-cache");
+  res.send(JSON.stringify(manifest, null, 2));
+});
+
+app.get("/favicon.png", (req, res) => {
+  sendBase64Asset(res, FAVICON_BASE64, "image/png");
+});
+
+app.get("/icon-192.png", (req, res) => {
+  sendBase64Asset(res, ICON_192_BASE64, "image/png");
+});
+
+app.get("/icon-512.png", (req, res) => {
+  sendBase64Asset(res, ICON_512_BASE64, "image/png");
+});
+
+// --------------------------------------------------
+// Public content routes
+// --------------------------------------------------
+
+app.get("/content/:type/index.json", async (req, res) => {
+  try {
+    const type = ensureSupportedType(req.params.type);
+    const index = await readTypeIndex(type);
+    res.json(index);
+  } catch (error) {
+    res.status(400).json({
+      ok: false,
+      error: error.message
+    });
+  }
+});
+
+app.get("/content/:type/:slug.json", async (req, res) => {
+  try {
+    const type = ensureSupportedType(req.params.type);
+    const slug = normalizeSlug(req.params.slug);
+
+    if (!slug) {
+      return res.status(400).json({
+        ok: false,
+        error: "A valid slug is required."
       });
-      return;
     }
 
-    navigator.serviceWorker.register("/service-worker.js", { updateViaCache: "none" });
-  });
-}
-`;
+    const filePath = resolveRecordFilePathBySlug(type, slug);
+    const record = await readJsonFile(filePath, null);
 
-    const finalContent = rescueCode + "\n\n" + jsContent;
+    if (!record) {
+      return res.status(404).json({
+        ok: false,
+        error: "Record not found."
+      });
+    }
 
-    res.setHeader("Content-Type", "application/javascript");
-    res.setHeader("Cache-Control", "no-cache");
-    res.send(finalContent);
+    return res.json(record);
   } catch (error) {
-    console.error("Error serving main.js:", error);
-    res.status(500).send("Error loading main.js");
+    res.status(400).json({
+      ok: false,
+      error: error.message
+    });
   }
 });
 
 // --------------------------------------------------
-// Existing service worker route with version injection
+// Protected CRUD API
 // --------------------------------------------------
 
-app.get("/service-worker.js", (req, res) => {
+app.get("/api/:type/items", adminAuth, async (req, res) => {
   try {
-    let swContent = fs.readFileSync(path.join(ROOT_DIR, "service-worker.js"), "utf8");
-
-    const versionInjection = `
-// Version injected by server
-self.SW_CACHE_NAME = self.SW_CACHE_NAME || "${APP_NAME}-${CACHE_VERSION}";
-self.SW_TEMP_CACHE_NAME = self.SW_TEMP_CACHE_NAME || "${APP_NAME}-temp-${CACHE_VERSION}";
-self.SW_FIRST_TIME_TIMEOUT = "${process.env.SW_FIRST_TIME_TIMEOUT || "20000"}";
-self.SW_RETURNING_USER_TIMEOUT = "${process.env.SW_RETURNING_USER_TIMEOUT || "5000"}";
-self.SW_ENABLE_LOGS = "${process.env.SW_ENABLE_LOGS || "true"}";
-`;
-
-    swContent = versionInjection + "\n" + swContent;
-
-    res.setHeader("Content-Type", "application/javascript");
-    res.setHeader("Cache-Control", "no-cache, no-store, must-revalidate");
-    res.setHeader("Pragma", "no-cache");
-    res.setHeader("Expires", "0");
-    res.send(swContent);
-  } catch (error) {
-    console.error("Error serving service worker:", error);
-    res.status(500).send("Error loading service worker");
-  }
-});
-
-// --------------------------------------------------
-// Protected article API
-// --------------------------------------------------
-
-app.get("/findArticles", adminAuth, async (req, res) => {
-  try {
-    const index = await readArticlesIndex();
+    const type = ensureSupportedType(req.params.type);
+    const index = await readTypeIndex(type);
     const requestedSlugs = extractRequestedSlugs(req);
     const withContent = String(req.query.withContent || "").toLowerCase() === "true";
 
@@ -311,83 +521,35 @@ app.get("/findArticles", adminAuth, async (req, res) => {
       results = index.filter(item => requestedSlugs.includes(normalizeSlug(item.slug)));
     }
 
-    if (withContent) {
-      const expanded = [];
-      for (const item of results) {
-        try {
-          const article = await loadArticleContent(item);
-          expanded.push(article);
-        } catch (error) {
-          expanded.push({
-            ...item,
-            loadError: `Unable to read article file: ${item.file}`
-          });
-        }
-      }
-
+    if (!withContent) {
       return res.json({
         ok: true,
-        count: expanded.length,
-        articles: expanded
+        type,
+        count: results.length,
+        items: results
       });
+    }
+
+    const expanded = [];
+    for (const item of results) {
+      try {
+        const record = await loadRecordContent(type, item);
+        expanded.push(record);
+      } catch {
+        expanded.push({
+          ...item,
+          loadError: "Unable to read record file."
+        });
+      }
     }
 
     return res.json({
       ok: true,
-      count: results.length,
-      articles: results
+      type,
+      count: expanded.length,
+      items: expanded
     });
   } catch (error) {
-    console.error("findArticles error:", error);
-    res.status(500).json({
-      ok: false,
-      error: error.message
-    });
-  }
-});
-
-app.post("/createArticle", adminAuth, async (req, res) => {
-  try {
-    const article = validateArticlePayload(req.body, {
-      requireHtml: true,
-      requireSlug: true
-    });
-
-    const index = await readArticlesIndex();
-
-    const existing = index.find(item => normalizeSlug(item.slug) === article.slug);
-    if (existing) {
-      return res.status(409).json({
-        ok: false,
-        error: `Article with slug "${article.slug}" already exists.`
-      });
-    }
-
-    const articleFilePath = resolveArticleFilePath(article.file);
-
-    if (fs.existsSync(articleFilePath)) {
-      return res.status(409).json({
-        ok: false,
-        error: `Article file already exists: ${article.file}`
-      });
-    }
-
-    await writeJsonFileAtomic(articleFilePath, article);
-
-    const nextIndex = [...index, buildIndexEntry(article)].sort((a, b) => {
-      const da = new Date(a.publishedAt).getTime();
-      const db = new Date(b.publishedAt).getTime();
-      return db - da;
-    });
-
-    await writeArticlesIndex(nextIndex);
-
-    res.status(201).json({
-      ok: true,
-      article: buildIndexEntry(article)
-    });
-  } catch (error) {
-    console.error("createArticle error:", error);
     res.status(400).json({
       ok: false,
       error: error.message
@@ -395,10 +557,64 @@ app.post("/createArticle", adminAuth, async (req, res) => {
   }
 });
 
-app.put("/updateArticle", adminAuth, async (req, res) => {
+app.post("/api/:type/items", adminAuth, async (req, res) => {
   try {
-    const targetSlug = normalizeSlug(req.body.targetSlug || req.body.slug);
+    const type = ensureSupportedType(req.params.type);
+    const index = await readTypeIndex(type);
 
+    const now = nowUtcIso();
+    const record = validateRecordPayload(type, {
+      ...req.body,
+      createdAt: req.body.createdAt || now,
+      updatedAt: req.body.updatedAt || now
+    }, {
+      requireSlug: true,
+      requireHtml: true
+    });
+
+    const existing = index.find(item => normalizeSlug(item.slug) === record.slug);
+    if (existing) {
+      return res.status(409).json({
+        ok: false,
+        error: `A record with slug "${record.slug}" already exists.`
+      });
+    }
+
+    const filePath = resolveRecordFilePathBySlug(type, record.slug);
+    if (fs.existsSync(filePath)) {
+      return res.status(409).json({
+        ok: false,
+        error: `A record file already exists for slug "${record.slug}".`
+      });
+    }
+
+    await writeJsonFileAtomic(filePath, record);
+
+    const nextIndex = sortIndexByUpdatedAtThenPublishedAt([
+      ...index,
+      buildIndexEntry(type, record)
+    ]);
+
+    await writeTypeIndex(type, nextIndex);
+
+    res.status(201).json({
+      ok: true,
+      type,
+      item: buildIndexEntry(type, record)
+    });
+  } catch (error) {
+    res.status(400).json({
+      ok: false,
+      error: error.message
+    });
+  }
+});
+
+app.put("/api/:type/items", adminAuth, async (req, res) => {
+  try {
+    const type = ensureSupportedType(req.params.type);
+
+    const targetSlug = normalizeSlug(req.body.targetSlug || req.body.slug);
     if (!targetSlug) {
       return res.status(400).json({
         ok: false,
@@ -406,7 +622,7 @@ app.put("/updateArticle", adminAuth, async (req, res) => {
       });
     }
 
-    const index = await readArticlesIndex();
+    const index = await readTypeIndex(type);
     const existingIndexPosition = index.findIndex(
       item => normalizeSlug(item.slug) === targetSlug
     );
@@ -414,73 +630,59 @@ app.put("/updateArticle", adminAuth, async (req, res) => {
     if (existingIndexPosition === -1) {
       return res.status(404).json({
         ok: false,
-        error: `Article with slug "${targetSlug}" was not found.`
+        error: `A record with slug "${targetSlug}" was not found.`
       });
     }
 
     const currentEntry = index[existingIndexPosition];
-    const currentFilePath = resolveArticleFilePath(currentEntry.file);
-    const currentArticle = await readJsonFile(currentFilePath);
+    const currentFilePath = resolveRecordFilePathBySlug(type, currentEntry.slug);
+    const currentRecord = await readJsonFile(currentFilePath);
 
-    const mergedPayload = {
-      ...currentArticle,
-      ...req.body,
-      slug: req.body.slug ? req.body.slug : currentArticle.slug,
-      file: req.body.file ? req.body.file : currentArticle.file
-    };
-
-    const updatedArticle = validateArticlePayload(mergedPayload, {
-      requireHtml: true,
-      requireSlug: true
-    });
-
-    const newFilePath = resolveArticleFilePath(updatedArticle.file);
-
+    const nextSlug = normalizeSlug(req.body.slug || currentRecord.slug);
     const slugConflict = index.find(
       item =>
-        normalizeSlug(item.slug) === updatedArticle.slug &&
+        normalizeSlug(item.slug) === nextSlug &&
         normalizeSlug(item.slug) !== targetSlug
     );
 
     if (slugConflict) {
       return res.status(409).json({
         ok: false,
-        error: `Another article already uses slug "${updatedArticle.slug}".`
+        error: `Another record already uses slug "${nextSlug}".`
       });
     }
 
-    if (
-      updatedArticle.file !== currentEntry.file &&
-      fs.existsSync(newFilePath)
-    ) {
-      return res.status(409).json({
-        ok: false,
-        error: `Target file already exists: ${updatedArticle.file}`
-      });
-    }
+    const updatedRecord = validateRecordPayload(type, {
+      ...currentRecord,
+      ...req.body,
+      slug: nextSlug,
+      createdAt: currentRecord.createdAt,
+      updatedAt: nowUtcIso()
+    }, {
+      requireSlug: true,
+      requireHtml: true,
+      currentRecord
+    });
 
-    await writeJsonFileAtomic(newFilePath, updatedArticle);
+    const newFilePath = resolveRecordFilePathBySlug(type, updatedRecord.slug);
+
+    await writeJsonFileAtomic(newFilePath, updatedRecord);
 
     if (newFilePath !== currentFilePath && fs.existsSync(currentFilePath)) {
       await fsp.unlink(currentFilePath);
     }
 
-    index[existingIndexPosition] = buildIndexEntry(updatedArticle);
+    index[existingIndexPosition] = buildIndexEntry(type, updatedRecord);
 
-    const nextIndex = [...index].sort((a, b) => {
-      const da = new Date(a.publishedAt).getTime();
-      const db = new Date(b.publishedAt).getTime();
-      return db - da;
-    });
-
-    await writeArticlesIndex(nextIndex);
+    const nextIndex = sortIndexByUpdatedAtThenPublishedAt(index);
+    await writeTypeIndex(type, nextIndex);
 
     res.json({
       ok: true,
-      article: buildIndexEntry(updatedArticle)
+      type,
+      item: buildIndexEntry(type, updatedRecord)
     });
   } catch (error) {
-    console.error("updateArticle error:", error);
     res.status(400).json({
       ok: false,
       error: error.message
@@ -488,8 +690,9 @@ app.put("/updateArticle", adminAuth, async (req, res) => {
   }
 });
 
-app.delete("/deleteArticle", adminAuth, async (req, res) => {
+app.delete("/api/:type/items", adminAuth, async (req, res) => {
   try {
+    const type = ensureSupportedType(req.params.type);
     const targetSlug = normalizeSlug(req.query.slug || req.body?.slug);
 
     if (!targetSlug) {
@@ -499,34 +702,31 @@ app.delete("/deleteArticle", adminAuth, async (req, res) => {
       });
     }
 
-    const index = await readArticlesIndex();
+    const index = await readTypeIndex(type);
     const existingEntry = index.find(item => normalizeSlug(item.slug) === targetSlug);
 
     if (!existingEntry) {
       return res.status(404).json({
         ok: false,
-        error: `Article with slug "${targetSlug}" was not found.`
+        error: `A record with slug "${targetSlug}" was not found.`
       });
     }
 
-    const articleFilePath = resolveArticleFilePath(existingEntry.file);
+    const filePath = resolveRecordFilePathBySlug(type, existingEntry.slug);
 
-    if (fs.existsSync(articleFilePath)) {
-      await fsp.unlink(articleFilePath);
+    if (fs.existsSync(filePath)) {
+      await fsp.unlink(filePath);
     }
 
-    const nextIndex = index.filter(
-      item => normalizeSlug(item.slug) !== targetSlug
-    );
-
-    await writeArticlesIndex(nextIndex);
+    const nextIndex = index.filter(item => normalizeSlug(item.slug) !== targetSlug);
+    await writeTypeIndex(type, nextIndex);
 
     res.json({
       ok: true,
+      type,
       deletedSlug: targetSlug
     });
   } catch (error) {
-    console.error("deleteArticle error:", error);
     res.status(400).json({
       ok: false,
       error: error.message
@@ -535,23 +735,106 @@ app.delete("/deleteArticle", adminAuth, async (req, res) => {
 });
 
 // --------------------------------------------------
-// Static files + SPA routes
+// Dynamic HTML
 // --------------------------------------------------
 
-app.use(express.static(ROOT_DIR));
+function escapeHtml(value) {
+  return String(value || "")
+    .replaceAll("&", "&amp;")
+    .replaceAll("<", "&lt;")
+    .replaceAll(">", "&gt;")
+    .replaceAll('"', "&quot;")
+    .replaceAll("'", "&#39;");
+}
+
+function renderIndexHtml() {
+  const template = fs.readFileSync(path.join(ROOT_DIR, "index.html"), "utf8");
+
+  return template
+    .replaceAll("__HTML_LANG__", escapeHtml(SITE_LANGUAGE))
+    .replaceAll("__SITE_TITLE__", escapeHtml(SITE_TITLE))
+    .replaceAll("__SITE_DESCRIPTION__", escapeHtml(SITE_DESCRIPTION));
+}
+
+app.get("/main.js", (req, res) => {
+  try {
+    let jsContent = fs.readFileSync(path.join(ROOT_DIR, "main.js"), "utf8");
+
+    const rescueCode = `
+// Service worker bootstrap
+if ("serviceWorker" in navigator) {
+  navigator.serviceWorker.register("/service-worker.js", { updateViaCache: "none" }).catch(() => {});
+}
+`;
+
+    jsContent = `${rescueCode}\n${jsContent}`;
+
+    res.setHeader("Content-Type", "application/javascript; charset=utf-8");
+    res.setHeader("Cache-Control", "no-cache");
+    res.send(jsContent);
+  } catch {
+    res.status(500).send("Error loading main.js");
+  }
+});
+
+app.get("/service-worker.js", (req, res) => {
+  try {
+    const swPath = path.join(ROOT_DIR, "service-worker.js");
+
+    if (!fs.existsSync(swPath)) {
+      return res.status(404).send("Service worker not found");
+    }
+
+    let swContent = fs.readFileSync(swPath, "utf8");
+
+    const versionInjection = `
+// Version injected by server
+self.SW_CACHE_NAME = self.SW_CACHE_NAME || "${APP_NAME}-${CACHE_VERSION}";
+self.SW_TEMP_CACHE_NAME = self.SW_TEMP_CACHE_NAME || "${APP_NAME}-temp-${CACHE_VERSION}";
+`;
+
+    swContent = `${versionInjection}\n${swContent}`;
+
+    res.setHeader("Content-Type", "application/javascript; charset=utf-8");
+    res.setHeader("Cache-Control", "no-cache, no-store, must-revalidate");
+    res.setHeader("Pragma", "no-cache");
+    res.setHeader("Expires", "0");
+    res.send(swContent);
+  } catch {
+    res.status(500).send("Error loading service worker");
+  }
+});
 
 app.get("/", (req, res) => {
-  res.sendFile(path.join(ROOT_DIR, "index.html"));
+  res.setHeader("Content-Type", "text/html; charset=utf-8");
+  res.send(renderIndexHtml());
 });
 
 app.get("/article/:slug", (req, res) => {
-  res.sendFile(path.join(ROOT_DIR, "index.html"));
+  res.setHeader("Content-Type", "text/html; charset=utf-8");
+  res.send(renderIndexHtml());
 });
+
+// --------------------------------------------------
+// Static files
+// --------------------------------------------------
+
+app.use(express.static(ROOT_DIR));
 
 // --------------------------------------------------
 // Boot
 // --------------------------------------------------
 
-app.listen(PORT, () => {
-  console.log(`Server running at http://localhost:${PORT}`);
-});
+ensureDataLayout()
+  .then(() => {
+    app.listen(PORT, () => {
+      console.log(`Server running at http://localhost:${PORT}`);
+      console.log(`Data directory: ${DATA_DIR}`);
+      console.log(`Default content type: ${DEFAULT_CONTENT_TYPE}`);
+      console.log(`Site language: ${SITE_LANGUAGE}`);
+    });
+  })
+  .catch(error => {
+    console.error("Failed to initialize data directory:", error);
+    process.exit(1);
+  });
