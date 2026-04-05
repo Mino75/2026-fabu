@@ -171,11 +171,19 @@ function getIndexFilePath(type) {
 }
 
 function getDefaultRecordFile(slug, type) {
-  return `${slug}.${type}.json`;
+  if (type !== "article") {
+    throw new Error(`Unsupported content type "${type}".`);
+  }
+
+  return `${slug}.article.json`;
 }
 
 function buildPublicRecordPath(type, slug) {
-  return `/content/${encodeURIComponent(type)}/${encodeURIComponent(slug)}.json`;
+  if (type !== "article") {
+    throw new Error(`Unsupported content type "${type}".`);
+  }
+
+  return `/${encodeURIComponent(slug)}.article.json`;
 }
 
 function resolveRecordFilePathBySlug(type, slug) {
@@ -493,19 +501,35 @@ app.get("/content/:type/index.json", async (req, res) => {
   }
 });
 
-app.get("/content/:type/:slug.json", async (req, res) => {
+app.get("/article.index.json", async (req, res) => {
   try {
-    const type = ensureSupportedType(req.params.type);
-    const slug = normalizeSlug(req.params.slug);
+    const index = await readTypeIndex("article");
+    res.json(index);
+  } catch (error) {
+    res.status(400).json({
+      ok: false,
+      error: error.message
+    });
+  }
+});
 
-    if (!slug) {
+app.get("/:recordFile", async (req, res, next) => {
+  try {
+    const recordFile = String(req.params.recordFile || "").trim();
+
+    if (!recordFile.endsWith(".article.json")) {
+      return next();
+    }
+
+    const filePath = path.resolve(DATA_DIR, recordFile);
+
+    if (!filePath.startsWith(DATA_DIR)) {
       return res.status(400).json({
         ok: false,
-        error: "A valid slug is required."
+        error: "Invalid record path."
       });
     }
 
-    const filePath = resolveRecordFilePathBySlug(type, slug);
     const record = await readJsonFile(filePath, null);
 
     if (!record) {
