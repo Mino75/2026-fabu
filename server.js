@@ -193,20 +193,13 @@ function getIndexFilePath(type) {
   return path.join(DATA_DIR, `${type}.index.json`);
 }
 
-function getDefaultRecordFile(slug, type) {
-  if (type !== "article") {
-    throw new Error(`Unsupported content type "${type}".`);
-  }
 
-  return `${slug}.article.json`;
+function getDefaultRecordFile(slug, type) {
+  return `${slug}.${type}.json`;
 }
 
 function buildPublicRecordPath(type, slug) {
-  if (type !== "article") {
-    throw new Error(`Unsupported content type "${type}".`);
-  }
-
-  return `/${encodeURIComponent(slug)}.article.json`;
+  return `/${encodeURIComponent(slug)}.${type}.json`;
 }
 
 function resolveRecordFilePathBySlug(type, slug) {
@@ -328,7 +321,7 @@ async function loadRecordContent(type, entry) {
 // Content validation
 // --------------------------------------------------
 
-function validateArticlePayload(payload, options = {}) {
+function validateArticlePayload(type,payload, options = {}) {
   const {
     requireSlug = true,
     requireHtml = true,
@@ -368,7 +361,7 @@ function validateArticlePayload(payload, options = {}) {
   }
 
   return {
-    type: "article",
+    type,
     slug,
     title: String(payload.title ?? currentRecord?.title ?? "").trim(),
     excerpt: String(payload.excerpt ?? currentRecord?.excerpt ?? "").trim(),
@@ -380,14 +373,10 @@ function validateArticlePayload(payload, options = {}) {
   };
 }
 
+
 function validateRecordPayload(type, payload, options = {}) {
   const safeType = ensureSupportedType(type);
-
-  if (safeType === "article") {
-    return validateArticlePayload(payload, options);
-  }
-
-  throw new Error(`No validator is registered for "${safeType}".`);
+  return validateArticlePayload(safeType, payload, options);
 }
 
 // --------------------------------------------------
@@ -499,9 +488,9 @@ app.get("/icon-512.png", (req, res) => {
 // --------------------------------------------------
 
 
-app.get("/article.index.json", async (req, res) => {
+app.get(`/${DEFAULT_CONTENT_TYPE}.index.json`, async (req, res) => {
   try {
-    const index = await readTypeIndex("article");
+    const index = await readTypeIndex(DEFAULT_CONTENT_TYPE);
     res.json(index);
   } catch (error) {
     res.status(400).json({
@@ -515,7 +504,7 @@ app.get("/:recordFile", async (req, res, next) => {
   try {
     const recordFile = String(req.params.recordFile || "").trim();
 
-    if (!recordFile.endsWith(".article.json")) {
+    if (!recordFile.endsWith(`.${DEFAULT_CONTENT_TYPE}.json`)) {
       return next();
     }
 
@@ -545,7 +534,6 @@ app.get("/:recordFile", async (req, res, next) => {
     });
   }
 });
-
 // --------------------------------------------------
 // Protected CRUD API
 // --------------------------------------------------
@@ -852,7 +840,7 @@ app.get("/", (req, res) => {
   res.send(renderIndexHtml());
 });
 
-app.get("/article/:slug", (req, res) => {
+app.get(`/${DEFAULT_CONTENT_TYPE}/:slug`, (req, res) => {
   res.setHeader("Content-Type", "text/html; charset=utf-8");
   res.send(renderIndexHtml());
 });
