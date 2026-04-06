@@ -546,41 +546,6 @@ function renderTagList(container, tags) {
   });
 }
 
-function sanitizeHtml(html) {
-  const template = document.createElement("template");
-  template.innerHTML = html || "";
-
-  const blockedSelectors = [
-    "script",
-    "iframe",
-    "object",
-    "embed",
-    "link[rel='import']",
-    "meta[http-equiv]"
-  ];
-
-  blockedSelectors.forEach(selector => {
-    template.content.querySelectorAll(selector).forEach(node => node.remove());
-  });
-
-  template.content.querySelectorAll("*").forEach(node => {
-    [...node.attributes].forEach(attr => {
-      const name = attr.name.toLowerCase();
-      const value = attr.value.trim().toLowerCase();
-
-      if (name.startsWith("on")) {
-        node.removeAttribute(attr.name);
-        return;
-      }
-
-      if ((name === "href" || name === "src") && value.startsWith("javascript:")) {
-        node.removeAttribute(attr.name);
-      }
-    });
-  });
-
-  return template.innerHTML;
-}
 
 function escapeHtml(value) {
   const div = document.createElement("div");
@@ -796,7 +761,7 @@ async function renderArticlePage(slug) {
     renderTagList(qs("#articleTags"), article.tags || []);
 
     const articleBody = qs("#articleBody");
-    articleBody.innerHTML = sanitizeHtml(article.html);
+    articleBody.innerHTML = article.html;
 
     document.title = `${article.title || t.untitled} · ${APP_CONFIG.siteTitle || "Publisher"}`;
   } catch (error) {
