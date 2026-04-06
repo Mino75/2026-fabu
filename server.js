@@ -10,7 +10,7 @@ const app = express();
 // --------------------------------------------------
 
 const SUPPORTED_LANGUAGES = new Set(["en", "fr", "mg", "zh-CN", "ru", "ja", "es"]);
-const SUPPORTED_TYPES = new Set(["article"]);
+const SUPPORTED_TYPES = null; // dynamic — any valid type accepted
 
 
 
@@ -48,14 +48,11 @@ app.use(express.json({ limit: "2mb" }));
 
 async function ensureDataLayout() {
   await fsp.mkdir(DATA_DIR, { recursive: true });
-
-  for (const type of SUPPORTED_TYPES) {
-    const indexPath = getIndexFilePath(type);
-    try {
-      await fsp.access(indexPath);
-    } catch {
-      await writeJsonFileAtomic(indexPath, []);
-    }
+  const indexPath = getIndexFilePath(DEFAULT_CONTENT_TYPE);
+  try {
+    await fsp.access(indexPath);
+  } catch {
+    await writeJsonFileAtomic(indexPath, []);
   }
 }
 
@@ -118,9 +115,7 @@ function normalizeType(value) {
 
 function ensureSupportedType(type) {
   const normalized = normalizeType(type);
-  if (!normalized || !SUPPORTED_TYPES.has(normalized)) {
-    throw new Error(`Unsupported content type "${type}".`);
-  }
+  if (!normalized) throw new Error("A valid content type is required.");
   return normalized;
 }
 
