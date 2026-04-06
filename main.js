@@ -762,6 +762,12 @@ async function renderArticlePage(slug) {
 
     const articleBody = qs("#articleBody");
     articleBody.innerHTML = article.html;
+    articleBody.querySelectorAll("script").forEach(old => {
+      const s = document.createElement("script");
+      [...old.attributes].forEach(a => s.setAttribute(a.name, a.value));
+      s.textContent = old.textContent;
+      old.replaceWith(s);
+    });
 
     document.title = `${article.title || t.untitled} · ${APP_CONFIG.siteTitle || "Publisher"}`;
   } catch (error) {
