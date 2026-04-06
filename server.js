@@ -845,6 +845,15 @@ app.get(`/${DEFAULT_CONTENT_TYPE}/:slug`, (req, res) => {
   res.send(renderIndexHtml());
 });
 
+app.get("*", (req, res, next) => {
+  // Laisser passer les fichiers statiques et les routes API
+  if (req.path.includes(".") || req.path.startsWith("/api/")) {
+    return next();
+  }
+  res.setHeader("Content-Type", "text/html; charset=utf-8");
+  res.send(renderIndexHtml());
+});
+
 // --------------------------------------------------
 // Static files
 // --------------------------------------------------
