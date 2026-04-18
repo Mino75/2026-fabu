@@ -479,6 +479,36 @@ async function loadRecordBySlug(type, slug) {
 // UI helpers
 // --------------------------------------------------
 
+function addArticleOnlyToggle() {
+  const articleShell = qs(".article-shell");
+  const articleHeader = qs(".article-header");
+  const topNav = qs(".top-nav");
+  const articleBody = qs("#articleBody");
+
+  if (!articleShell || !articleBody) return;
+
+  const button = document.createElement("button");
+  button.type = "button";
+  button.className = "button-link button-secondary article-toggle";
+  button.textContent = "Article only";
+
+  let articleOnly = false;
+
+  button.addEventListener("click", () => {
+    articleOnly = !articleOnly;
+
+    articleShell.classList.toggle("article-only-mode", articleOnly);
+
+    if (topNav) topNav.hidden = articleOnly;
+    if (articleHeader) articleHeader.hidden = articleOnly;
+
+    button.textContent = articleOnly ? "Show full page" : "Article only";
+  });
+
+  articleShell.prepend(button);
+}
+
+
 function qs(selector, root = document) {
   return root.querySelector(selector);
 }
@@ -768,6 +798,8 @@ async function renderArticlePage(slug) {
       s.textContent = old.textContent;
       old.replaceWith(s);
     });
+
+      addArticleOnlyToggle();
 
     document.title = `${article.title || t.untitled} · ${APP_CONFIG.siteTitle || "Publisher"}`;
   } catch (error) {
