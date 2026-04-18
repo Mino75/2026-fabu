@@ -25,18 +25,21 @@ const css = `
 }
 
 .article-only-mode {
-  max-width: 100%;
+  width: 100% !important;
+  max-width: none !important;
+  margin: 0 !important;
+  padding: 0 !important;
 }
 
 .article-only-mode .article-body {
-  margin: 0 auto;
-  width: min(900px, 100%);
-  min-height: 70vh; /* change if needed */
-}
-
-.article-only-mode .article-toggle {
-  display: inline-flex;
-  margin-bottom: 1rem;
+  width: 100% !important;
+  max-width: none !important;
+  min-height: 100vh;
+  margin: 0 !important;
+  padding: 0 !important;
+  border: 0 !important;
+  border-radius: 0 !important;
+  box-shadow: none !important;
 }
 
 
