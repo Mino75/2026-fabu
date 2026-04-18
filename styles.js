@@ -20,6 +20,28 @@ const css = `
   box-sizing: border-box;
 }
 
+.article-toggle {
+  margin-bottom: 1rem;
+}
+
+.article-only-mode {
+  max-width: 100%;
+}
+
+.article-only-mode .article-body {
+  margin: 0 auto;
+  width: min(900px, 100%);
+  min-height: 70vh; /* change if needed */
+}
+
+.article-only-mode .article-toggle {
+  display: inline-flex;
+  margin-bottom: 1rem;
+}
+
+
+
+
 html {
   font-size: 16px;
 }
