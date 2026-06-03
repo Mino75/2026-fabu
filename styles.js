@@ -1,9 +1,16 @@
+const cfg = window.__APP_CONFIG__ || {};
+
+const BG = cfg.themeBackgroundColor || "#f7f8fb";
+const TOOLBAR = cfg.themeToolbarColor || "rgba(255,255,255,0.92)";
+const CONTENT = cfg.themeContentColor || "rgba(255,255,255,0.98)";
+const TITLE = cfg.themeTitleColor || "#0f172a";
+
 const css = `
 :root {
-  --bg: #f7f8fb;
+  --bg: ${BG};
   --bg-2: #eef2f7;
-  --surface: rgba(255, 255, 255, 0.92);
-  --surface-2: rgba(255, 255, 255, 0.98);
+  --surface: ${TOOLBAR};
+  --surface-2: ${CONTENT};
   --line: rgba(15, 23, 42, 0.1);
   --text: #111827;
   --muted: #5b6472;
@@ -133,7 +140,7 @@ select:focus {
   font-size: clamp(2.2rem, 10vw, 4.5rem);
   line-height: 0.95;
   letter-spacing: -0.04em;
-  color: #0f172a;
+  color: ${TITLE};
 }
 
 .hero-text {
@@ -213,7 +220,7 @@ select:focus {
   font-size: 1.35rem;
   line-height: 1.15;
   letter-spacing: -0.02em;
-  color: #0f172a;
+  color: ${TITLE};
 }
 
 .card-excerpt,
@@ -304,7 +311,7 @@ select:focus {
   font-size: clamp(2rem, 8vw, 3.6rem);
   line-height: 0.98;
   letter-spacing: -0.04em;
-  color: #0f172a;
+  color: ${TITLE};
 }
 
 .article-body {
@@ -321,7 +328,7 @@ select:focus {
   margin-bottom: 0.55em;
   line-height: 1.15;
   letter-spacing: -0.02em;
-  color: #0f172a;
+  color: ${TITLE};
 }
 
 .article-body p,
