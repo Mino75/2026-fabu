@@ -322,21 +322,6 @@ async function loadRecordContent(type, entry) {
   return readJsonFile(filePath);
 }
 
-function escapeCssValue(value) {
-  return String(value || "").replace(/[^#(),.%\w\s-]/g, "");
-}
-
-function renderThemeStyle() {
-  return `
-<style>
-:root {
-  --background-color: ${escapeCssValue(THEME_BACKGROUND_COLOR)};
-  --toolbar-color: ${escapeCssValue(THEME_TOOLBAR_COLOR)};
-  --content-box-color: ${escapeCssValue(THEME_CONTENT_BOX_COLOR)};
-  --title-color: ${escapeCssValue(THEME_TITLE_COLOR)};
-}
-</style>`;
-}
 
 // --------------------------------------------------
 // Content validation
@@ -452,7 +437,12 @@ app.get("/app-config.js", (req, res) => {
     siteDescription: SITE_DESCRIPTION,
     siteLanguage: SITE_LANGUAGE,
     defaultContentType: DEFAULT_CONTENT_TYPE,
-    heroBadge: SITE_HERO_BADGE 
+    heroBadge: SITE_HERO_BADGE, 
+
+    themeBackgroundColor: process.env.THEME_BACKGROUND_COLOR,
+    themeToolbarColor: process.env.THEME_TOOLBAR_COLOR,
+    themeContentColor: process.env.THEME_CONTENT_COLOR,
+    themeTitleColor: process.env.THEME_TITLE_COLOR
   };
 
   res.setHeader("Content-Type", "application/javascript; charset=utf-8");
@@ -802,7 +792,6 @@ function renderIndexHtml() {
   const template = fs.readFileSync(path.join(ROOT_DIR, "index.html"), "utf8");
 
   return template
-    .replace("</head>", `${renderThemeStyle()}\n</head>`)
     .replaceAll("__HTML_LANG__", escapeHtml(SITE_LANGUAGE))
     .replaceAll("__SITE_TITLE__", escapeHtml(SITE_TITLE))
     .replaceAll("__SITE_DESCRIPTION__", escapeHtml(SITE_DESCRIPTION));
