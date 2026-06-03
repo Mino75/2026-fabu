@@ -501,15 +501,45 @@ app.get("/manifest.webmanifest", (req, res) => {
 });
 
 app.get("/favicon.ico", (req, res) => {
-  sendBase64Asset(res, FAVICON_BASE64, "image/x-icon");
+  if (FAVICON_BASE64) {
+    return sendBase64Asset(res, FAVICON_BASE64, "image/x-icon");
+  }
+
+  const fallback = path.join(ROOT_DIR, "favicon.ico");
+
+  if (fs.existsSync(fallback)) {
+    return res.sendFile(fallback);
+  }
+
+  res.status(404).end();
 });
 
 app.get("/icon-192.png", (req, res) => {
-  sendBase64Asset(res, ICON_192_BASE64, "image/png");
+  if (ICON_192_BASE64) {
+    return sendBase64Asset(res, ICON_192_BASE64, "image/png");
+  }
+
+  const fallback = path.join(ROOT_DIR, "icon-192.png");
+
+  if (fs.existsSync(fallback)) {
+    return res.sendFile(fallback);
+  }
+
+  res.status(404).end();
 });
 
 app.get("/icon-512.png", (req, res) => {
-  sendBase64Asset(res, ICON_512_BASE64, "image/png");
+  if (ICON_512_BASE64) {
+    return sendBase64Asset(res, ICON_512_BASE64, "image/png");
+  }
+
+  const fallback = path.join(ROOT_DIR, "icon-512.png");
+
+  if (fs.existsSync(fallback)) {
+    return res.sendFile(fallback);
+  }
+
+  res.status(404).end();
 });
 
 // --------------------------------------------------
