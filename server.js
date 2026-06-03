@@ -36,6 +36,11 @@ const SITE_LANGUAGE = normalizeLanguage(process.env.SITE_LANGUAGE || "en");
 
 const DEFAULT_CONTENT_TYPE = normalizeType(process.env.DEFAULT_CONTENT_TYPE || "article") || "article";
 
+const THEME_BACKGROUND_COLOR = process.env.THEME_BACKGROUND_COLOR || "#f7f8fb";
+const THEME_TOOLBAR_COLOR = process.env.THEME_TOOLBAR_COLOR || "#ffffff";
+const THEME_CONTENT_BOX_COLOR = process.env.THEME_CONTENT_BOX_COLOR || "#ffffff";
+const THEME_TITLE_COLOR = process.env.THEME_TITLE_COLOR || "#111827";
+
 const FAVICON_BASE64 = process.env.FAVICON_BASE64 || "";
 const ICON_192_BASE64 = process.env.ICON_192_BASE64 || "";
 const ICON_512_BASE64 = process.env.ICON_512_BASE64 || "";
