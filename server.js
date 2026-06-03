@@ -37,9 +37,18 @@ const SITE_LANGUAGE = normalizeLanguage(process.env.SITE_LANGUAGE || "en");
 const DEFAULT_CONTENT_TYPE = normalizeType(process.env.DEFAULT_CONTENT_TYPE || "article") || "article";
 
 const THEME_BACKGROUND_COLOR = process.env.THEME_BACKGROUND_COLOR || "#f7f8fb";
-const THEME_TOOLBAR_COLOR = process.env.THEME_TOOLBAR_COLOR || "#ffffff";
-const THEME_CONTENT_BOX_COLOR = process.env.THEME_CONTENT_BOX_COLOR || "#ffffff";
-const THEME_TITLE_COLOR = process.env.THEME_TITLE_COLOR || "#111827";
+const THEME_BACKGROUND_SECONDARY_COLOR = process.env.THEME_BACKGROUND_SECONDARY_COLOR || "#eef2f7";
+const THEME_TOOLBAR_COLOR = process.env.THEME_TOOLBAR_COLOR || "rgba(255,255,255,0.92)";
+const THEME_CONTENT_BOX_COLOR = process.env.THEME_CONTENT_BOX_COLOR || "rgba(255,255,255,0.98)";
+const THEME_TITLE_COLOR = process.env.THEME_TITLE_COLOR || "#0f172a";
+const THEME_TEXT_COLOR = process.env.THEME_TEXT_COLOR || "#111827";
+const THEME_MUTED_TEXT_COLOR = process.env.THEME_MUTED_TEXT_COLOR || "#5b6472";
+const THEME_ACCENT_COLOR = process.env.THEME_ACCENT_COLOR || "#2563eb";
+const THEME_ACCENT_SECONDARY_COLOR = process.env.THEME_ACCENT_SECONDARY_COLOR || "#1d4ed8";
+const THEME_LINE_COLOR = process.env.THEME_LINE_COLOR || "rgba(15,23,42,0.1)";
+const THEME_INPUT_COLOR = process.env.THEME_INPUT_COLOR || "#ffffff";
+const THEME_BUTTON_COLOR = process.env.THEME_BUTTON_COLOR || "#ffffff";
+const THEME_CODE_BLOCK_COLOR = process.env.THEME_CODE_BLOCK_COLOR || "#f3f6fb";
 
 const FAVICON_BASE64 = process.env.FAVICON_BASE64 || "";
 const ICON_192_BASE64 = process.env.ICON_192_BASE64 || "";
