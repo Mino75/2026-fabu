@@ -64,6 +64,40 @@ The index file (`article.index.json`) is an array of lightweight index entries (
 | `ICON_192_BASE64` | *(empty)* | Base64-encoded 192×192 PNG icon |
 | `ICON_512_BASE64` | *(empty)* | Base64-encoded 512×512 PNG icon |
 
+
+### 🎨 Theme customization
+
+All theme values can be overridden through Docker environment variables without rebuilding the image.
+
+| Variable | Default |
+|---|---|
+| `THEME_BACKGROUND_COLOR` | `#f7f8fb` |
+| `THEME_BACKGROUND_SECONDARY_COLOR` | `#eef2f7` |
+| `THEME_TOOLBAR_COLOR` | `rgba(255,255,255,0.92)` |
+| `THEME_CONTENT_BOX_COLOR` | `rgba(255,255,255,0.98)` |
+| `THEME_TITLE_COLOR` | `#0f172a` |
+| `THEME_TEXT_COLOR` | `#111827` |
+| `THEME_MUTED_TEXT_COLOR` | `#5b6472` |
+| `THEME_ACCENT_COLOR` | `#2563eb` |
+| `THEME_ACCENT_SECONDARY_COLOR` | `#1d4ed8` |
+| `THEME_LINE_COLOR` | `rgba(15,23,42,0.1)` |
+| `THEME_INPUT_COLOR` | `#ffffff` |
+| `THEME_BUTTON_COLOR` | `#ffffff` |
+| `THEME_CODE_BLOCK_COLOR` | `#f3f6fb` |
+
+These variables control:
+
+- Page background and gradients
+- Toolbar and filter panel backgrounds
+- Article cards and content containers
+- Titles and headings
+- Primary text and muted text
+- Accent colors and tags
+- Borders and separators
+- Form inputs
+- Buttons
+- Code blocks
+
 ### 🌍 Supported languages
 
 `en` `fr` `mg` `zh-CN` `ru` `ja` `es`
@@ -164,12 +198,6 @@ services:
       SITE_HERO_BADGE: "My Badge"
       SITE_LANGUAGE: "fr"
       DEFAULT_CONTENT_TYPE: article
-    labels:
-      - "traefik.enable=true"
-      - "traefik.frontend.rule=Host:mysite.example.com"
-      - "traefik.docker.network=web"
-      - "traefik.http.services.fabu-node.loadbalancer.server.port=3000"
-
 networks:
   web:
     external: true
