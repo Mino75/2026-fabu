@@ -439,10 +439,10 @@ app.get("/app-config.js", (req, res) => {
     defaultContentType: DEFAULT_CONTENT_TYPE,
     heroBadge: SITE_HERO_BADGE, 
 
-    themeBackgroundColor: process.env.THEME_BACKGROUND_COLOR,
-    themeToolbarColor: process.env.THEME_TOOLBAR_COLOR,
-    themeContentColor: process.env.THEME_CONTENT_COLOR,
-    themeTitleColor: process.env.THEME_TITLE_COLOR
+    themeBackgroundColor: THEME_BACKGROUND_COLOR,
+    themeToolbarColor: THEME_TOOLBAR_COLOR,
+    themeContentBoxColor: THEME_CONTENT_BOX_COLOR,
+    themeTitleColor: THEME_TITLE_COLOR
   };
 
   res.setHeader("Content-Type", "application/javascript; charset=utf-8");
