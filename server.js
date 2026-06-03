@@ -449,9 +449,18 @@ app.get("/app-config.js", (req, res) => {
     heroBadge: SITE_HERO_BADGE, 
 
     themeBackgroundColor: THEME_BACKGROUND_COLOR,
+    themeBackgroundSecondaryColor: THEME_BACKGROUND_SECONDARY_COLOR,
     themeToolbarColor: THEME_TOOLBAR_COLOR,
     themeContentBoxColor: THEME_CONTENT_BOX_COLOR,
-    themeTitleColor: THEME_TITLE_COLOR
+    themeTitleColor: THEME_TITLE_COLOR,
+    themeTextColor: THEME_TEXT_COLOR,
+    themeMutedTextColor: THEME_MUTED_TEXT_COLOR,
+    themeAccentColor: THEME_ACCENT_COLOR,
+    themeAccentSecondaryColor: THEME_ACCENT_SECONDARY_COLOR,
+    themeLineColor: THEME_LINE_COLOR,
+    themeInputColor: THEME_INPUT_COLOR,
+    themeButtonColor: THEME_BUTTON_COLOR,
+    themeCodeBlockColor: THEME_CODE_BLOCK_COLOR
   };
 
   res.setHeader("Content-Type", "application/javascript; charset=utf-8");
