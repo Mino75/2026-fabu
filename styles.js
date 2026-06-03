@@ -109,13 +109,13 @@ select {
 }
 
 input::placeholder {
-  color: #8a93a3;
+  color: var(--muted);
 }
 
 input:focus,
 select:focus {
-  border-color: rgba(37, 99, 235, 0.45);
-  box-shadow: 0 0 0 4px rgba(37, 99, 235, 0.08);
+  border-color: var(--accent);
+  box-shadow: 0 0 0 4px color-mix(in srgb, var(--accent) 18%, transparent);
 }
 
 .page-shell {
@@ -139,8 +139,8 @@ select:focus {
   padding: 0.35rem 0.75rem;
   border-radius: 999px;
   color: var(--accent);
-  background: rgba(37, 99, 235, 0.08);
-  border: 1px solid rgba(37, 99, 235, 0.14);
+  background: var(--surface-2);
+  border: 1px solid var(--line);
   font-size: 0.78rem;
   font-weight: 700;
   letter-spacing: 0.08em;
@@ -253,17 +253,17 @@ select:focus {
   min-height: 44px;
   padding: 0.75rem 1rem;
   border-radius: 14px;
-  border: 1px solid rgba(37, 99, 235, 0.18);
-  background: linear-gradient(180deg, rgba(37, 99, 235, 0.08), rgba(37, 99, 235, 0.05));
-  color: #0f172a;
+  border: 1px solid var(--line);
+  background: var(--button);
+  color: var(--text);
   font-weight: 650;
   transition: transform 160ms ease, border-color 160ms ease, background 160ms ease;
 }
 
 .button-link:hover {
   transform: translateY(-1px);
-  border-color: rgba(37, 99, 235, 0.32);
-  background: linear-gradient(180deg, rgba(37, 99, 235, 0.12), rgba(37, 99, 235, 0.07));
+  border-color: var(--accent);
+  background: var(--button);
 }
 
 .button-secondary {
@@ -293,8 +293,8 @@ select:focus {
   min-height: 30px;
   padding: 0.25rem 0.7rem;
   border-radius: 999px;
-  border: 1px solid rgba(37, 99, 235, 0.12);
-  background: rgba(37, 99, 235, 0.06);
+  border: 1px solid var(--line);
+  background: var(--surface-2);
   color: var(--accent);
   font-size: 0.8rem;
   white-space: nowrap;
@@ -379,7 +379,7 @@ select:focus {
   padding: 0.85rem 1rem;
   border-left: 3px solid var(--accent);
   border-radius: 0 14px 14px 0;
-  background: rgba(37, 99, 235, 0.06);
+  background: var(--surface-2);
 }
 
 .empty-state {
