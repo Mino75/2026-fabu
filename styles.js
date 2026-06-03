@@ -1,21 +1,33 @@
 const cfg = window.__APP_CONFIG__ || {};
 
 const BG = cfg.themeBackgroundColor || "#f7f8fb";
+const BG2 = cfg.themeBackgroundSecondaryColor || "#eef2f7";
 const TOOLBAR = cfg.themeToolbarColor || "rgba(255,255,255,0.92)";
 const CONTENT = cfg.themeContentBoxColor || "rgba(255,255,255,0.98)";
 const TITLE = cfg.themeTitleColor || "#0f172a";
+const TEXT = cfg.themeTextColor || "#111827";
+const MUTED = cfg.themeMutedTextColor || "#5b6472";
+const ACCENT = cfg.themeAccentColor || "#2563eb";
+const ACCENT2 = cfg.themeAccentSecondaryColor || "#1d4ed8";
+const LINE = cfg.themeLineColor || "rgba(15,23,42,0.1)";
+const INPUT = cfg.themeInputColor || "#ffffff";
+const BUTTON = cfg.themeButtonColor || "#ffffff";
+const CODE = cfg.themeCodeBlockColor || "#f3f6fb";
 
 const css = `
 :root {
   --bg: ${BG};
-  --bg-2: #eef2f7;
+  --bg-2: ${BG2};
   --surface: ${TOOLBAR};
   --surface-2: ${CONTENT};
-  --line: rgba(15, 23, 42, 0.1);
-  --text: #111827;
-  --muted: #5b6472;
-  --accent: #2563eb;
-  --accent-2: #1d4ed8;
+  --line: ${LINE};
+  --text: ${TEXT};
+  --muted: ${MUTED};
+  --accent: ${ACCENT};
+  --accent-2: ${ACCENT2};
+  --input: ${INPUT};
+  --button: ${BUTTON};
+  --code: ${CODE};
   --shadow: 0 18px 48px rgba(15, 23, 42, 0.08);
   --radius: 20px;
   --radius-sm: 14px;
@@ -90,7 +102,7 @@ select {
   border: 1px solid var(--line);
   border-radius: 14px;
   padding: 0.9rem 1rem;
-  background: #ffffff;
+  background: var(--input);
   color: var(--text);
   outline: none;
   transition: border-color 160ms ease, box-shadow 160ms ease, transform 160ms ease;
@@ -256,7 +268,7 @@ select:focus {
 
 .button-secondary {
   width: 100%;
-  background: #ffffff;
+  background: var(--button);
 }
 
 .load-more-row {
@@ -359,7 +371,7 @@ select:focus {
   padding: 1rem;
   border-radius: 14px;
   border: 1px solid var(--line);
-  background: #f3f6fb;
+  background: var(--code);
 }
 
 .article-body blockquote {
