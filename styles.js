@@ -2,7 +2,7 @@ const cfg = window.__APP_CONFIG__ || {};
 
 const BG = cfg.themeBackgroundColor || "#f7f8fb";
 const TOOLBAR = cfg.themeToolbarColor || "rgba(255,255,255,0.92)";
-const CONTENT = cfg.themeContentColor || "rgba(255,255,255,0.98)";
+const CONTENT = cfg.themeContentBoxColor || "rgba(255,255,255,0.98)";
 const TITLE = cfg.themeTitleColor || "#0f172a";
 
 const css = `
