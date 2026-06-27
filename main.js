@@ -418,7 +418,7 @@ async function syncChangedRecordsFromIndex(type, indexItems) {
 
 async function loadContentIndex(type) {
   try {
-    const remoteItems = await fetchJson(INDEX_URL);
+    const remoteItems = await fetchJson(`/${encodeURIComponent(type)}.index.json`);
 
     if (!Array.isArray(remoteItems)) {
       throw new Error("Index endpoint must return an array.");
@@ -522,8 +522,9 @@ function normalizeText(value) {
   return String(value || "").toLowerCase().trim();
 }
 
-function articleUrl(slug) {
-  return `/article/${encodeURIComponent(slug)}`;
+function articleUrl(slug, type = CONTENT_TYPE) {
+  const safeType = String(type || CONTENT_TYPE || "article").trim();
+  return `/${encodeURIComponent(safeType)}/${encodeURIComponent(slug)}`;
 }
 
 function navigateTo(url) {
@@ -605,10 +606,13 @@ function getRoute() {
     return { name: "home" };
   }
 
-  if (path.startsWith("/article/")) {
+  const parts = path.split("/").filter(Boolean);
+  
+  if (parts.length === 2) {
     return {
       name: "article",
-      slug: decodeURIComponent(path.slice("/article/".length))
+      type: decodeURIComponent(parts[0]) || CONTENT_TYPE,
+      slug: decodeURIComponent(parts[1])
     };
   }
 
@@ -708,7 +712,7 @@ async function renderHome() {
         qs(".card-excerpt", card).textContent = article.excerpt || "";
 
         const link = qs(".card-link", card);
-        link.href = articleUrl(article.slug);
+        link.href = articleUrl(article.slug, article.type);
         link.setAttribute("data-link", "");
         link.textContent = t.readArticle;
 
@@ -771,9 +775,10 @@ async function renderHome() {
   }
 }
 
-async function renderArticlePage(slug) {
+async function renderArticlePage(slug, type = CONTENT_TYPE) {
   try {
-    const article = await loadRecordBySlug(CONTENT_TYPE, slug);
+    const contentType = type || CONTENT_TYPE;
+    const article = await loadRecordBySlug(contentType, slug);
 
     if (!article) {
       renderNotFound();
@@ -831,7 +836,7 @@ async function render() {
   }
 
   if (route.name === "article") {
-    await renderArticlePage(route.slug);
+    await renderArticlePage(route.slug, route.type);
     return;
   }
 
