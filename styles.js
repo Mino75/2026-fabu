@@ -301,7 +301,8 @@ select:focus {
 }
 
 .article-shell {
-  max-width: 860px;
+  max-width: none;
+  width: 100%;
 }
 
 .top-nav {
@@ -314,6 +315,7 @@ select:focus {
 }
 
 .article-header {
+  max-width: 860px;
   padding: 1.1rem;
   margin-bottom: 1rem;
 }
@@ -327,6 +329,8 @@ select:focus {
 }
 
 .article-body {
+  width: 100%;
+  max-width: none;
   padding: 1.1rem;
   overflow-wrap: anywhere;
   background: var(--surface-2);
