@@ -910,6 +910,17 @@ app.get(`/${DEFAULT_CONTENT_TYPE}/:slug`, (req, res) => {
 // Static files
 // --------------------------------------------------
 
+app.use(
+  "/media",
+  express.static(path.join(DATA_DIR, "media"), {
+    maxAge: "1y",
+    immutable: true,
+    etag: true,
+    lastModified: true
+  })
+);
+
+
 app.use(express.static(ROOT_DIR));
 
 
