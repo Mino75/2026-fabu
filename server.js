@@ -825,6 +825,202 @@ app.delete("/api/:type/items", adminAuth, async (req, res) => {
   }
 });
 
+
+// --------------------------------------------------
+// Protected Media API
+// --------------------------------------------------
+
+const upload = multer({
+  storage: multer.memoryStorage(),
+  limits: {
+    fileSize: 50 * 1024 * 1024
+  }
+});
+
+function buildPublicMediaPath(name) {
+  return `/media/${encodeURIComponent(name)}`;
+}
+
+app.get("/api/media/items", adminAuth, async (req, res) => {
+  try {
+    const requestedName = req.query.name ? String(req.query.name).trim() : "";
+
+    const files = await fsp.readdir(DATA_DIR);
+    const items = [];
+
+    for (const fileName of files) {
+      try {
+        const { name, ext, filePath } = resolveDataMediaFile(fileName);
+
+        if (requestedName && name !== requestedName) {
+          continue;
+        }
+
+        const stat = await fsp.stat(filePath);
+
+        if (!stat.isFile()) {
+          continue;
+        }
+
+        items.push({
+          name,
+          type: ext.slice(1),
+          size: stat.size,
+          updatedAt: stat.mtime.toISOString(),
+          url: buildPublicMediaPath(name)
+        });
+      } catch {
+        // Ignore non-media files
+      }
+    }
+
+    res.json({
+      ok: true,
+      count: items.length,
+      items
+    });
+  } catch (error) {
+    res.status(400).json({
+      ok: false,
+      error: error.message
+    });
+  }
+});
+
+app.post("/api/media/items", adminAuth, upload.single("file"), async (req, res) => {
+  try {
+    if (!req.file) {
+      return res.status(400).json({
+        ok: false,
+        error: "A media file is required."
+      });
+    }
+
+    const originalName = req.file.originalname;
+    const { name, filePath } = resolveDataMediaFile(originalName);
+
+    if (fs.existsSync(filePath)) {
+      return res.status(409).json({
+        ok: false,
+        error: `A media file named "${name}" already exists.`
+      });
+    }
+
+    await fsp.writeFile(filePath, req.file.buffer);
+
+    const stat = await fsp.stat(filePath);
+
+    res.status(201).json({
+      ok: true,
+      item: {
+        name,
+        type: path.extname(name).slice(1).toLowerCase(),
+        size: stat.size,
+        updatedAt: stat.mtime.toISOString(),
+        url: buildPublicMediaPath(name)
+      }
+    });
+  } catch (error) {
+    res.status(400).json({
+      ok: false,
+      error: error.message
+    });
+  }
+});
+
+app.put("/api/media/items", adminAuth, async (req, res) => {
+  try {
+    const targetName = String(req.body.targetName || "").trim();
+    const nextName = String(req.body.name || "").trim();
+
+    if (!targetName || !nextName) {
+      return res.status(400).json({
+        ok: false,
+        error: "targetName and name are required."
+      });
+    }
+
+    const current = resolveDataMediaFile(targetName);
+    const next = resolveDataMediaFile(nextName);
+
+    if (current.ext !== next.ext) {
+      return res.status(400).json({
+        ok: false,
+        error: "Changing media file type is not allowed."
+      });
+    }
+
+    if (!fs.existsSync(current.filePath)) {
+      return res.status(404).json({
+        ok: false,
+        error: `Media file "${current.name}" was not found.`
+      });
+    }
+
+    if (fs.existsSync(next.filePath)) {
+      return res.status(409).json({
+        ok: false,
+        error: `Media file "${next.name}" already exists.`
+      });
+    }
+
+    await fsp.rename(current.filePath, next.filePath);
+
+    const stat = await fsp.stat(next.filePath);
+
+    res.json({
+      ok: true,
+      item: {
+        name: next.name,
+        type: next.ext.slice(1),
+        size: stat.size,
+        updatedAt: stat.mtime.toISOString(),
+        url: buildPublicMediaPath(next.name)
+      }
+    });
+  } catch (error) {
+    res.status(400).json({
+      ok: false,
+      error: error.message
+    });
+  }
+});
+
+app.delete("/api/media/items", adminAuth, async (req, res) => {
+  try {
+    const targetName = String(req.query.name || req.body?.name || "").trim();
+
+    if (!targetName) {
+      return res.status(400).json({
+        ok: false,
+        error: "name is required."
+      });
+    }
+
+    const target = resolveDataMediaFile(targetName);
+
+    if (!fs.existsSync(target.filePath)) {
+      return res.status(404).json({
+        ok: false,
+        error: `Media file "${target.name}" was not found.`
+      });
+    }
+
+    await fsp.unlink(target.filePath);
+
+    res.json({
+      ok: true,
+      deletedName: target.name
+    });
+  } catch (error) {
+    res.status(400).json({
+      ok: false,
+      error: error.message
+    });
+  }
+});
+
+
 // --------------------------------------------------
 // Dynamic HTML
 // --------------------------------------------------
@@ -912,16 +1108,51 @@ app.get(`/${DEFAULT_CONTENT_TYPE}/:slug`, (req, res) => {
 // Static files
 // --------------------------------------------------
 
-app.use(
-  "/media",
-  express.static(path.join(DATA_DIR, "media"), {
-    maxAge: "1y",
-    immutable: true,
-    etag: true,
-    lastModified: true
-  })
-);
+const PUBLIC_MEDIA_EXTENSIONS = new Set([
+  ".webp",
+  ".jpg",
+  ".jpeg",
+  ".png",
+  ".gif",
+  ".svg",
+  ".pdf",
+  ".mp4",
+  ".webm",
+  ".mp3",
+  ".wav"
+]);
 
+function resolveDataMediaFile(fileName) {
+  const name = path.basename(String(fileName || "").trim());
+  const ext = path.extname(name).toLowerCase();
+
+  if (!name || name !== String(fileName || "").trim()) {
+    throw new Error("Invalid file name.");
+  }
+
+  if (!PUBLIC_MEDIA_EXTENSIONS.has(ext)) {
+    throw new Error("Unsupported media type.");
+  }
+
+  const filePath = path.resolve(DATA_DIR, name);
+
+  if (!filePath.startsWith(DATA_DIR)) {
+    throw new Error("Invalid media path.");
+  }
+
+  return { name, ext, filePath };
+}
+
+app.get("/media/:name", async (req, res) => {
+  try {
+    const { filePath } = resolveDataMediaFile(req.params.name);
+
+    res.setHeader("Cache-Control", "public, max-age=31536000, immutable");
+    res.sendFile(filePath);
+  } catch {
+    res.sendStatus(404);
+  }
+});
 
 app.use(express.static(ROOT_DIR));
 
