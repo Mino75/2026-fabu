@@ -43,22 +43,16 @@ const css = `
   margin-bottom: 1rem;
 }
 
-.article-only-mode {
-  width: 100% !important;
-  max-width: none !important;
-  margin: 0 !important;
-  padding: 0 !important;
+.article-only-mode .top-nav,
+.article-only-mode .article-header {
+  display: none;
 }
 
 .article-only-mode .article-body {
-  width: 100% !important;
-  max-width: none !important;
   min-height: 100vh;
-  margin: 0 !important;
-  padding: 0 !important;
-  border: 0 !important;
-  border-radius: 0 !important;
-  box-shadow: none !important;
+  border: 0;
+  border-radius: 0;
+  box-shadow: none;
 }
 
 
