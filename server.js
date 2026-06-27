@@ -841,7 +841,7 @@ function buildPublicMediaPath(name) {
   return `/media/${encodeURIComponent(name)}`;
 }
 
-app.get("/api/media/items", adminAuth, async (req, res) => {
+app.get("/api/assets/media", adminAuth, async (req, res) => {
   try {
     const requestedName = req.query.name ? String(req.query.name).trim() : "";
 
@@ -887,7 +887,7 @@ app.get("/api/media/items", adminAuth, async (req, res) => {
   }
 });
 
-app.post("/api/media/items", adminAuth, upload.single("file"), async (req, res) => {
+app.post("/api/assets/media", adminAuth, upload.single("file"), async (req, res) => {
   try {
     if (!req.file) {
       return res.status(400).json({
@@ -928,7 +928,7 @@ app.post("/api/media/items", adminAuth, upload.single("file"), async (req, res) 
   }
 });
 
-app.put("/api/media/items", adminAuth, async (req, res) => {
+app.put("/api/assets/media", adminAuth, async (req, res) => {
   try {
     const targetName = String(req.body.targetName || "").trim();
     const nextName = String(req.body.name || "").trim();
@@ -986,7 +986,7 @@ app.put("/api/media/items", adminAuth, async (req, res) => {
   }
 });
 
-app.delete("/api/media/items", adminAuth, async (req, res) => {
+app.delete("/api/assets/media", adminAuth, async (req, res) => {
   try {
     const targetName = String(req.query.name || req.body?.name || "").trim();
 
